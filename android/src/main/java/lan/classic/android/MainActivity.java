@@ -13,7 +13,7 @@ import java.util.*;
 import lan.classic.*;
 public final class MainActivity extends Activity implements GameView.Session {
     private final Handler handler=new Handler();private Accounts accounts;private android.content.SharedPreferences settings;
-    private String user="",language="ru";private int bots=1,fps=30;private GameConfig.Mode mode=GameConfig.Mode.DISASTERS;private boolean aiEnabled,ultraLow,playing;
+    private String user="",language="ru",placeName="Classic Baseplate";private int bots=1,fps=30;private GameConfig.Mode mode=GameConfig.Mode.DISASTERS;private boolean aiEnabled,ultraLow,playing;
     private volatile World world;private Net.Host host;private Net.Client client;private int localId;
     private GameView game;private TextView status,players,chat,health;private WifiManager.MulticastLock multicast;
     private LinearLayout menu;private float moveX,moveZ,stickX,stickZ;private int generation;
@@ -21,7 +21,7 @@ public final class MainActivity extends Activity implements GameView.Session {
     private ClassicPauseMenu pauseMenu;
     private boolean menuOpen;
     public void onCreate(Bundle state){super.onCreate(state);getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);accounts=new Accounts(this);settings=getSharedPreferences("settings",MODE_PRIVATE);language=settings.getString("language","ru");
-        try{mode=GameConfig.Mode.valueOf(settings.getString("mode",GameConfig.Mode.DISASTERS.name()));}catch(Exception ignored){}ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE);ActivityManager.MemoryInfo info=new ActivityManager.MemoryInfo();am.getMemoryInfo(info);ultraLow=info.totalMem<=600L*1024*1024||am.getMemoryClass()<=64;fps=settings.getInt("fps",ultraLow?20:30);login(false);
+        placeName=settings.getString("place","Classic Baseplate");try{mode=GameConfig.Mode.valueOf(settings.getString("mode",GameConfig.Mode.DISASTERS.name()));}catch(Exception ignored){}ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE);ActivityManager.MemoryInfo info=new ActivityManager.MemoryInfo();am.getMemoryInfo(info);ultraLow=info.totalMem<=600L*1024*1024||am.getMemoryClass()<=64;fps=settings.getInt("fps",ultraLow?20:30);login(false);
     }
     private String t(String en,String ru){return language.equals("ru")?ru:en;}
     private GradientDrawable panel(){GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xff73777d,0xff393d43});d.setStroke(dp(1),0xffb1b4b9);return d;}
@@ -73,7 +73,8 @@ public final class MainActivity extends Activity implements GameView.Session {
         playing=false;
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         setContentView(new ClassicHome(this,user,language.equals("ru"),settings.getBoolean(user+".recent",false),settings.getBoolean(user+".favorite",false),friends(),settings.getString(user+".chat",""),new ClassicHome.Actions() {
-            public void play(){start(false,null,Net.PORT);}
+            public void play(){placeName="Classic Baseplate";start(false,null,Net.PORT);}
+            public void playMode(String place){placeName=place; if(place.equals("Rocket Arena"))mode=GameConfig.Mode.ROCKET_ARENA;else if(place.equals("Sword Fight on the Heights"))mode=GameConfig.Mode.SWORD_FIGHT;else if(place.equals("Natural Disaster Survival"))mode=GameConfig.Mode.DISASTERS;else mode=GameConfig.Mode.SANDBOX;settings.edit().putString("place",placeName).putString("mode",mode.name()).apply();start(false,null,Net.PORT);}
             public void host(){start(true,null,Net.PORT);}
             public void servers(){MainActivity.this.servers();}
             public void settings(){preferences();}
@@ -153,7 +154,7 @@ public final class MainActivity extends Activity implements GameView.Session {
     }
 
     private void acquireMulticast(){if(multicast!=null)return;WifiManager wifi=(WifiManager)getApplicationContext().getSystemService(WIFI_SERVICE);if(wifi!=null){multicast=wifi.createMulticastLock("classic-lan");multicast.setReferenceCounted(false);multicast.acquire();}}
-    private void start(boolean lan,String address,int port){generation++;stopSession();setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);try{if(address==null){GameConfig config=new GameConfig();config.mode=mode;config.language=language;world=new World(config);Actor a=world.add(user,false,language);a.appearance=loadAppearance();localId=a.id;if(aiEnabled)for(int i=0;i<bots;i++)world.add("Builder"+(i+1),true,language);host=new Net.Host(world,lan,port);if(lan)acquireMulticast();}else client=new Net.Client(address,port,user,language,loadAppearance());playing=true;settings.edit().putBoolean(user+".recent",true).apply();showGame();}catch(Exception e){stopSession();home();new AlertDialog.Builder(this).setTitle("Connection error").setMessage(e.toString()).setPositiveButton("OK",null).show();}}
+    private void start(boolean lan,String address,int port){generation++;stopSession();setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);try{if(address==null){GameConfig config=new GameConfig();config.mode=mode;config.placeName=placeName;config.language=language;world=new World(config);Actor a=world.add(user,false,language);a.appearance=loadAppearance();localId=a.id;if(aiEnabled)for(int i=0;i<bots;i++)world.add("Builder"+(i+1),true,language);host=new Net.Host(world,lan,port);if(lan)acquireMulticast();}else client=new Net.Client(address,port,user,language,loadAppearance());playing=true;settings.edit().putBoolean(user+".recent",true).apply();showGame();}catch(Exception e){stopSession();home();new AlertDialog.Builder(this).setTitle("Connection error").setMessage(e.toString()).setPositiveButton("OK",null).show();}}
     private void showGame(){FrameLayout root=new FrameLayout(this);root.setMotionEventSplittingEnabled(true);game=new GameView(this,this);game.fps=fps;game.studs=!ultraLow;root.addView(game);status=label("",13);place(root,status,Gravity.TOP|Gravity.CENTER_HORIZONTAL,340,32,0,0);players=label("",12);players.setBackgroundColor(0x88505050);place(root,players,Gravity.TOP|Gravity.RIGHT,150,180,0,38);chat=label("",12);chat.setBackgroundColor(0x55303030);place(root,chat,Gravity.TOP|Gravity.LEFT,280,160,4,38);health=label("Health: 100",14);health.setTextColor(0xff66ee55);place(root,health,Gravity.BOTTOM|Gravity.RIGHT,150,36,4,4);
         Button back=button("Menu",new View.OnClickListener(){public void onClick(View v){openPause();}});place(root,back,Gravity.TOP|Gravity.LEFT,76,34,4,2);
         Button speak=button("Chat",new View.OnClickListener(){public void onClick(View v){final EditText e=new EditText(MainActivity.this);e.setSingleLine(true);new AlertDialog.Builder(MainActivity.this).setTitle("Chat").setView(e).setPositiveButton("Send",new DialogInterface.OnClickListener(){public void onClick(DialogInterface d,int i){String s=e.getText().toString();if(client!=null)client.chat(s);else if(world!=null)world.message(localId,s);}}).setNegativeButton("Cancel",null).show();}});place(root,speak,Gravity.TOP|Gravity.LEFT,76,34,84,2);

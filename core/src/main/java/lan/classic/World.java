@@ -36,8 +36,25 @@ public final class World {
         for(int i=0;i<6;i++){Part brick=new Part(-24+(i%3)*3,1+(i/3)*2,0,3,2,2,0xb84a3c);brick.material=Part.Material.Brick;brick.joint=2;parts.add(brick);}
         Part seat=new Part(8,1,14,3,2,3,0x735130);seat.seat=true;parts.add(seat);
         Part moving=new Part(-12,2,18,6,1,5,0x386aa0);moving.moving=true;parts.add(moving);
+        buildClassicPlace(config.placeName);
         for(Part part:parts){part.originX=part.x;part.originY=part.y;part.originZ=part.z;originals.add(part.copy());}
 
+    }
+    /** Original Part-only recreations. They are deliberately small and legal: no
+     * downloaded Roblox meshes/textures are embedded, and an administrator may
+     * still replace them with a supplied .rbxlx through PlaceImporter. */
+    private void buildClassicPlace(String name){
+        if(name==null||name.length()==0||name.equals("Classic Baseplate"))return;
+        mapName=name;
+        if(name.equals("Crossroads")){parts.add(new Part(0,1,-10,8,2,44,0x777b83));parts.add(new Part(-22,1,0,44,2,8,0x777b83));parts.add(new Part(0,9,0,4,16,4,0xc7c9cc));parts.add(new Part(0,18,0,12,2,12,0xc84c42));}
+        else if(name.equals("Happy Home in Robloxia")){Part floor=new Part(0,1,0,28,2,22,0xd8c39b);floor.material=Part.Material.Wood;parts.add(floor);parts.add(new Part(-12,6,0,2,10,22,0xffd6b49a));parts.add(new Part(12,6,0,2,10,22,0xffd6b49a));parts.add(new Part(0,6,-10,22,10,2,0xffd6b49a));parts.add(new Part(0,12,0,28,2,22,0xffb6483d));}
+        else if(name.equals("Chaos Canyon")){for(int i=0;i<9;i++){Part rock=new Part(-20+(i%3)*20,2+(i%2)*3,-12+(i/3)*12,10,4+(i%2)*3,10,0x8d654b);rock.shape=Part.Shape.Wedge;rock.material=Part.Material.Slate;parts.add(rock);}}
+        else if(name.equals("Glass Houses")){for(int x:new int[]{-18,18}){Part house=new Part(x,6,0,12,12,12,0x92d6e6);house.transparency=.45f;house.material=Part.Material.SmoothPlastic;parts.add(house);}}
+        else if(name.equals("Rocket Arena")){parts.add(new Part(0,4,-28,56,8,2,0x575c64));parts.add(new Part(0,4,28,56,8,2,0x575c64));parts.add(new Part(-28,4,0,2,8,56,0x575c64));parts.add(new Part(28,4,0,2,8,56,0x575c64));}
+        else if(name.equals("Sword Fight on the Heights")){for(int i=0;i<4;i++){Part tower=new Part(-18+(i%2)*36,5+(i/2)*5,-12+(i/2)*24,12,10,12,0x777d86);tower.material=Part.Material.Metal;parts.add(tower);}parts.add(new Part(0,8,0,4,1,38,0x985c31));}
+        else if(name.equals("Work at a Pizza Place")){Part shop=new Part(0,5,-12,30,10,16,0xe1a05e);shop.material=Part.Material.Brick;parts.add(shop);Part oven=new Part(0,2,-2,8,3,4,0x96999f);oven.material=Part.Material.Metal;parts.add(oven);parts.add(new Part(0,1,8,32,2,12,0x6a9a57));}
+        else if(name.equals("Natural Disaster Survival")){parts.add(new Part(0,3,-20,28,6,20,0x8cb8c5));parts.add(new Part(0,12,-20,18,2,18,0x777d86));}
+        for(Part p:parts)if(p.canCollide&&p.anchored&&p.sx>=3&&p.sz>=3){int n=nav.add(p.x,p.y+p.sy/2,p.z,Navigation.Kind.Ground);if(n>nav.nodes.size())break;}
     }
     public synchronized Actor add(String name,boolean bot,String language){Actor a=new Actor(nextId++,name,bot);a.language=language;a.x=spawnX+(a.id%3-1)*4;a.y=spawnY;a.z=spawnZ;
         if(bot){a.appearance.colors[1]=new int[]{0x0d69ac,0xc4281c,0x4b974b,0x6b327c}[a.id%4];a.appearance.hat=a.id%4;a.personality=new String[]{"Friendly","Quiet","Competitive","Helpful"}[a.id%4];}

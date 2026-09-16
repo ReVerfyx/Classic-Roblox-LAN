@@ -61,7 +61,7 @@ Tiny LLM is not implemented. Before adding a backend, measure APK+model size, pr
 
 ## Map roadmap
 
-Classic Baseplate is an original procedural test level. The catalog names Natural Disaster Survival, Crossroads, Happy Home in Robloxia, Chaos Canyon, Glass Houses, Rocket Arena, Sword Fight on the Heights and Work at a Pizza Place as import-only entries. Original assets are not bundled and are never downloaded from unofficial sources. `AuthorizedPlaceLoader` requires a server admin key before accepting a provided RBXLX file. Script source is collected and can run only in the bounded `LuaSandbox` subset (`print`, `wait`, `ChangeDisaster`, `spawnPart`); arbitrary Roblox Luau is intentionally not claimed.
+Classic Baseplate and the catalog entries Natural Disaster Survival, Crossroads, Happy Home in Robloxia, Chaos Canyon, Glass Houses, Rocket Arena, Sword Fight on the Heights and Work at a Pizza Place use small original Part-only reconstructions. No original meshes, textures or scripts are downloaded. A server administrator can additionally import a supplied `.rbxlx` through `AuthorizedPlaceLoader` (ordinary users cannot create or import places). Script source is collected and can run only in the bounded `LuaSandbox` subset (`print`, `wait`, `ChangeDisaster`, `spawnPart`); arbitrary Roblox Luau is intentionally not claimed.
 
 Do not start additional maps until API16 install/render and two-device Wi-Fi tests pass.
 

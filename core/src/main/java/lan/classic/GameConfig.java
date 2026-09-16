@@ -8,6 +8,8 @@ public final class GameConfig {
     public boolean trustedScripts=false;
     public int luaInstructionBudget=20000;
     public String language="ru";
+    /** Local procedural place selected from the classic catalogue. */
+    public String placeName="Classic Baseplate";
     public long seed=System.nanoTime();
     public String forcedDisaster="";
 }
