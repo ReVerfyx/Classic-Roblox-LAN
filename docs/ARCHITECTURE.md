@@ -63,6 +63,8 @@ Tiny LLM is not implemented. Before adding a backend, measure APK+model size, pr
 
 Classic Baseplate and the catalog entries Natural Disaster Survival, Crossroads, Happy Home in Robloxia, Chaos Canyon, Glass Houses, Rocket Arena, Sword Fight on the Heights and Work at a Pizza Place use small original Part-only reconstructions. No original meshes, textures or scripts are downloaded. A server administrator can additionally import a supplied `.rbxlx` through `AuthorizedPlaceLoader` (ordinary users cannot create or import places). Script source is collected and can run only in the bounded `LuaSandbox` subset (`print`, `wait`, `ChangeDisaster`, `spawnPart`); arbitrary Roblox Luau is intentionally not claimed.
 
+The Android settings importer stores a selected `.rbxlx` in app-private/external `data/maps` and loads it only for a local host. Android OBB expansion files are not writable, so the data directory is intentional. The 3D wardrobe uses an API16-compatible GLES 1.1 preview and keeps the network payload limited to appearance colors, clothing IDs, hat/face IDs and animation-pack ID.
+
 Do not start additional maps until API16 install/render and two-device Wi-Fi tests pass.
 
 ## Menu reference revision (0.1.1)
