@@ -5,6 +5,7 @@ import android.graphics.*;
 import android.view.*;
 import android.widget.*;
 import java.util.Set;
+import lan.classic.ClassicPlaces;
 
 /** Early mobile green-shell navigation, native Views, no online or invented player counts. */
 final class ClassicHome extends LinearLayout {
@@ -52,6 +53,7 @@ final class ClassicHome extends LinearLayout {
             if(!recent&&!favorite)gameCard();
         } else if(tab==1) {
             section(tr("LOCAL GAMES","ЛОКАЛЬНЫЕ ИГРЫ"),-1);gameCard();
+            section(tr("CLASSIC PLACES","КЛАССИЧЕСКИЕ МЕСТА"),-1);for(ClassicPlaces.Entry place:ClassicPlaces.catalog())if(!place.bundled)lockedGame(place.name);
             section(tr("MULTIPLAYER","СЕТЕВАЯ ИГРА"),-1);
             action(tr("Create LAN game","Создать LAN игру"),new OnClickListener(){public void onClick(View v){actions.host();}});
             action(tr("Local servers / Direct connect","Серверы LAN / Подключение по IP"),new OnClickListener(){public void onClick(View v){actions.servers();}});
@@ -86,6 +88,7 @@ final class ClassicHome extends LinearLayout {
         LinearLayout buttons=new LinearLayout(getContext());card.addView(buttons);TextView play=text(tr("PLAY","ИГРАТЬ"),16,Color.WHITE);play.setGravity(Gravity.CENTER);play.setBackgroundColor(0xff00b65d);play.setOnClickListener(new OnClickListener(){public void onClick(View v){actions.play();}});buttons.addView(play,new LayoutParams(0,d(40),1));
         TextView star=text(favorite?tr("Saved","В избранном"):tr("Favorite","В избранное"),13,0xff2599bf);star.setGravity(Gravity.CENTER);star.setOnClickListener(new OnClickListener(){public void onClick(View v){favorite=!favorite;actions.favorite(favorite);show(selected);}});buttons.addView(star,new LayoutParams(0,d(40),1));image.setOnClickListener(new OnClickListener(){public void onClick(View v){actions.play();}});
     }
+    private void lockedGame(String name){LinearLayout card=new LinearLayout(getContext());card.setOrientation(VERTICAL);card.setPadding(d(10),d(8),d(10),d(8));card.setBackgroundColor(Color.WHITE);TextView title=text(name,16,0xff444444);card.addView(title);card.addView(text(tr("Import provided legal RBXLX on the server","Импортируйте предоставленный законный RBXLX на сервере"),12,0xff888888));TextView lock=text(tr("SERVER ADMIN ONLY","ТОЛЬКО АДМИНИСТРАТОР СЕРВЕРА"),11,0xff777777);lock.setGravity(Gravity.RIGHT);card.addView(lock);LayoutParams p=new LayoutParams(-1,-2);p.bottomMargin=d(6);body.addView(card,p);}
     private void action(String name,OnClickListener click){TextView v=text(name,17,0xff333333);v.setBackgroundColor(Color.WHITE);v.setPadding(d(12),0,d(8),0);v.setOnClickListener(click);LayoutParams p=new LayoutParams(-1,d(48));p.bottomMargin=d(8);body.addView(v,p);}
     private static final class Icon extends View {
         private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);private final Path path=new Path();private final int kind,color;
