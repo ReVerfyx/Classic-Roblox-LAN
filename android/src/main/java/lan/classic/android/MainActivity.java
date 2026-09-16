@@ -49,8 +49,37 @@ public final class MainActivity extends Activity implements GameView.Session {
     private void servers(){final int request=++generation;final LinearLayout root=page("Local Servers");final TextView info=label(t("Searching Wi-Fi…","Поиск в Wi-Fi…"),14);root.addView(info);final EditText ip=field(root,"IP: 192.168.1.50",false),port=field(root,"Port: 53640",false);port.setText("53640");port.setInputType(InputType.TYPE_CLASS_NUMBER);
         addButton(root,"DIRECT CONNECT",new View.OnClickListener(){public void onClick(View v){try{int p=Integer.parseInt(port.getText().toString());if(p<1||p>65535)throw new NumberFormatException();start(false,ip.getText().toString().trim(),p);}catch(NumberFormatException e){info.setText("Invalid port");}}});
         addButton(root,t("Back","Назад"),new View.OnClickListener(){public void onClick(View v){generation++;home();}});
-        acquireMulticast();new Thread(new Runnable(){public void run(){try{final List<String> found=Net.search();handler.post(new Runnable(){public void run(){if(request!=generation)return;info.setText(found.isEmpty()?t("No servers. Check Wi-Fi and router client isolation.","Серверов нет. Проверь Wi-Fi и изоляцию клиентов роутера."):"Local Servers");for(String line:found){final String[] p=line.split("\\|");if(p.length<7)continue;addButton(root,p[3]+" · "+p[5]+"/"+p[6]+" · PLAY",new View.OnClickListener(){public void onClick(View v){start(false,p[0],Integer.parseInt(p[2]));}});}});}catch(final Exception e){handler.post(new Runnable(){public void run(){if(request==generation)info.setText(e.toString());}});}}},"search").start();
+        acquireMulticast();
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    final List<String> found = Net.search();
+                    handler.post(new Runnable() {
+                        public void run() {
+                            if (request != generation) return;
+                            info.setText(found.isEmpty() ? t("No servers. Check Wi-Fi and router client isolation.", "Серверов нет. Проверь Wi-Fi и изоляцию клиентов роутера.") : "Local Servers");
+                            for (String line : found) {
+                                final String[] p = line.split("\\|");
+                                if (p.length < 7) continue;
+                                addButton(root, p[3] + " · " + p[5] + "/" + p[6] + " · PLAY", new View.OnClickListener() {
+                                    public void onClick(View v) {
+                                        start(false, p[0], Integer.parseInt(p[2]));
+                                    }
+                                });
+                            }
+                        }
+                    });
+                } catch (final Exception e) {
+                    handler.post(new Runnable() {
+                        public void run() {
+                            if (request == generation) info.setText(e.toString());
+                        }
+                    });
+                }
+            }
+        }, "search").start();
     }
+
     private void acquireMulticast(){if(multicast!=null)return;WifiManager wifi=(WifiManager)getApplicationContext().getSystemService(WIFI_SERVICE);if(wifi!=null){multicast=wifi.createMulticastLock("classic-lan");multicast.setReferenceCounted(false);multicast.acquire();}}
     private void start(boolean lan,String address,int port){generation++;stopSession();try{if(address==null){world=new World();Actor a=world.add(user,false,language);localId=a.id;if(aiEnabled)for(int i=0;i<bots;i++)world.add("Builder"+(i+1),true,language);host=new Net.Host(world,lan,port);if(lan)acquireMulticast();}else client=new Net.Client(address,port,user,language);playing=true;showGame();}catch(Exception e){stopSession();home();new AlertDialog.Builder(this).setTitle("Connection error").setMessage(e.toString()).setPositiveButton("OK",null).show();}}
     private void showGame(){FrameLayout root=new FrameLayout(this);game=new GameView(this,this);game.fps=fps;game.studs=!ultraLow;root.addView(game);status=label("",13);place(root,status,Gravity.TOP|Gravity.CENTER_HORIZONTAL,340,32,0,0);players=label("",12);players.setBackgroundColor(0x88505050);place(root,players,Gravity.TOP|Gravity.RIGHT,150,180,0,38);chat=label("",12);chat.setBackgroundColor(0x55303030);place(root,chat,Gravity.TOP|Gravity.LEFT,280,160,4,38);health=label("Health: 100",14);health.setTextColor(0xff66ee55);place(root,health,Gravity.BOTTOM|Gravity.RIGHT,150,36,4,4);
