@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- API16-compatible recreation of the 2006–2015 red Roblox square icon. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:left="2dp" android:top="2dp" android:right="2dp" android:bottom="2dp">
+        <shape android:shape="rectangle"><solid android:color="#d71920"/><corners android:radius="3dp"/></shape>
+    </item>
+    <item android:left="9dp" android:top="9dp" android:right="9dp" android:bottom="9dp">
+        <shape android:shape="rectangle"><solid android:color="#ffffff"/><corners android:radius="1dp"/></shape>
+    </item>
+    <item android:left="14dp" android:top="14dp" android:right="14dp" android:bottom="14dp">
+        <shape android:shape="rectangle"><solid android:color="#d71920"/></shape>
+    </item>
+</layer-list>

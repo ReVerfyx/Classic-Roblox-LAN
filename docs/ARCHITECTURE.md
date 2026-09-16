@@ -47,7 +47,7 @@ Classic-Roblox-LAN/
 
 Part has Position, Rotation, Size, Color, Material, Anchored, CanCollide, Transparency, Shape and surface flags. Only axis-aligned blocks/static collisions are implemented in this milestone. Map geometry currently comes from the versioned core rather than arbitrary remote data; both peers must use exactly the same build.
 
-TCP 53640: client sends magic 0x434c414e, protocol version 2, bounded username and language. Server replies magic and actor ID. Each request carries opcode 1 (input) or 2 (reset self), two normalized movement axes, jump flag, and bounded UTF-8 chat. Server replies a snapshot with phase, water, actors and recent chat. Limits: 20 actors, 8 chat lines, 160 chat characters, bounded length-prefix allocations, timeout 5s. No Java object deserialization. No account password travels over LAN. This is trusted-LAN identity, not cross-device password authentication.
+TCP 53640: client sends magic 0x434c414e, protocol version 3, bounded username/language and an R6 `Appearance`. Server replies magic and actor ID. Each request carries opcode 1 (input), 2 (reset self) or 3 (tool), two normalized movement axes, jump flag, optional tool id and bounded UTF-8 chat. Snapshots include appearance and tool state. Limits: 20 actors, 8 chat lines, 160 chat characters, bounded length-prefix allocations, timeout 5s. No Java object deserialization. No account password travels over LAN. This is trusted-LAN identity, not cross-device password authentication.
 
 UDP 53641: CLASSIC_LAN_DISCOVER_2 → CLASSIC_LAN_2|port|name|map|count|capacity. Broadcasts sent to interface broadcasts and global broadcast; direct IP fallback. Android holds a MulticastLock during LAN use. No external rendezvous or internet API.
 
@@ -61,13 +61,13 @@ Tiny LLM is not implemented. Before adding a backend, measure APK+model size, pr
 
 ## Map roadmap
 
-Classic Baseplate is an original procedural test level. Crossroads, Happy Home in Robloxia, Chaos Canyon, Glass Houses, Rocket Arena, Sword Fight on the Heights, Work at a Pizza Place and Natural Disaster Survival are not bundled. Implement a bounded RBXLX/portable-parts importer for user-supplied authorized assets next; do not silently substitute invented maps under those names. Roblox scripts require separate behavior reimplementation, not arbitrary evaluation.
+Classic Baseplate is an original procedural test level. The catalog names Natural Disaster Survival, Crossroads, Happy Home in Robloxia, Chaos Canyon, Glass Houses, Rocket Arena, Sword Fight on the Heights and Work at a Pizza Place as import-only entries. Original assets are not bundled and are never downloaded from unofficial sources. `AuthorizedPlaceLoader` requires a server admin key before accepting a provided RBXLX file. Script source is collected and can run only in the bounded `LuaSandbox` subset (`print`, `wait`, `ChangeDisaster`, `spawnPart`); arbitrary Roblox Luau is intentionally not claimed.
 
 Do not start additional maps until API16 install/render and two-device Wi-Fi tests pass.
 
 ## Menu reference revision (0.1.1)
 
-The supplied green mobile Home and translucent escape menu are used as explicit user-selected references. The visual contract is now intentionally mixed: 2012-style world/R6, early mobile login, and the later supplied mobile Home/escape menu. It is not claimed to be one pixel-exact 2012 client.
+The supplied green mobile Home, translucent escape menu and early login are used as explicit user-selected references. The visual contract is intentionally mixed: 2012-style world/R6, early mobile login, and the supplied mobile Home/escape menu. It is not claimed to be one pixel-exact 2012 client. `ClassicAvatarEditor` uses the same bevelled rectangular panels; old logo reference is Wikimedia Commons' 2006 Roblox logo.
 
 Research: https://www.webdesignmuseum.org/gallery/roblox-2015 (archived website, not a mobile screenshot); https://github.com/bloxstraplabs/bloxstrap/issues/2101 (primary project discussion identifying the 2015 escape menu). Some historical mobile pages were blocked. The supplied screenshots are the decisive visual source. No old APK was executed or imported.
 

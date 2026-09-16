@@ -37,15 +37,17 @@ final class GameView extends GLSurfaceView implements GLSurfaceView.Renderer {
         if(s.water>-2){g.glEnable(GL10.GL_BLEND);g.glBlendFunc(GL10.GL_SRC_ALPHA,GL10.GL_ONE_MINUS_SRC_ALPHA);g.glColor4f(.1f,.4f,.85f,.52f);g.glPushMatrix();g.glTranslatef(0,s.water-1,0);g.glScalef(128,2,128);mesh(g,cube,36);g.glPopMatrix();g.glDisable(GL10.GL_BLEND);}
     }
     private void drawActor(GL10 g,Actor a){g.glPushMatrix();g.glTranslatef(a.x,a.y,a.z);g.glRotatef(a.yaw,0,1,0);if(a.state==Actor.State.DEATH)g.glRotatef(85,0,0,1);
-        box(g,0,0,0,2,2,1,0x0d69ac);cyl(g,0,1.5f,0,1.25f,1,1.25f,0xf5cd30);
+        Appearance ap=a.appearance==null?new Appearance():a.appearance;
+        box(g,0,0,0,2,2,1,ap.colors[1]);cyl(g,0,1.5f,0,1.25f,1,1.25f,ap.colors[0]);
         // Face points towards local -Z; two eyes and a segmented smile.
         box(g,-.23f,1.64f,-.607f,.09f,.12f,.025f,0x151515);box(g,.23f,1.64f,-.607f,.09f,.12f,.025f,0x151515);
-        box(g,0,1.27f,-.623f,.36f,.045f,.02f,0x151515);box(g,-.2f,1.32f,-.603f,.055f,.10f,.02f,0x151515);box(g,.2f,1.32f,-.603f,.055f,.10f,.02f,0x151515);
+        if(ap.face==1)box(g,0,1.27f,-.623f,.36f,.045f,.02f,0x151515);else{box(g,-.16f,1.3f,-.623f,.06f,.03f,.02f,0x151515);box(g,.16f,1.3f,-.623f,.06f,.03f,.02f,0x151515);}
+        if(ap.hat==0)box(g,0,2.15f,0,1.8f,.25f,1.8f,0x4b2e1a);else if(ap.hat==1)cyl(g,0,2.15f,0,1.4f,.4f,1.4f,0xffd83d);else if(ap.hat==2)box(g,0,2.2f,0,2.4f,.18f,.55f,0x222222);else cyl(g,0,2.2f,0,.9f,.7f,.9f,0x8f8f8f);
         float swing=a.state==Actor.State.WALK?(float)Math.sin(a.phase)*32:0;
         if(a.state==Actor.State.CLIMB)swing=(float)Math.sin(a.phase*4)*35;
         float arm=a.state==Actor.State.JUMP||a.state==Actor.State.FALL?155:a.state==Actor.State.CLIMB?135:0;
-        limb(g,-1.5f,.8f,0,arm+swing,0xf5cd30);limb(g,1.5f,.8f,0,arm-swing,0xf5cd30);
-        limb(g,-.5f,-1,0,-swing,0xa4bd47);limb(g,.5f,-1,0,swing,0xa4bd47);g.glPopMatrix();
+        limb(g,-1.5f,.8f,0,arm+swing,ap.colors[2]);limb(g,1.5f,.8f,0,arm-swing,ap.colors[3]);
+        limb(g,-.5f,-1,0,-swing,ap.colors[4]);limb(g,.5f,-1,0,swing,ap.colors[5]);g.glPopMatrix();
     }
     private void limb(GL10 g,float x,float y,float z,float a,int color){g.glPushMatrix();g.glTranslatef(x,y,z);g.glRotatef(a,1,0,0);box(g,0,-1,0,1,2,1,color);g.glPopMatrix();}
     private void box(GL10 g,float x,float y,float z,float sx,float sy,float sz,int color){g.glPushMatrix();g.glTranslatef(x,y,z);g.glScalef(sx,sy,sz);g.glVertexPointer(3,GL10.GL_FLOAT,0,cube);for(int face=0;face<6;face++){float shade=SHADES[face];g.glColor4f(((color>>16)&255)/255f*shade,((color>>8)&255)/255f*shade,(color&255)/255f*shade,1);g.glDrawArrays(GL10.GL_TRIANGLES,face*6,6);}g.glPopMatrix();}

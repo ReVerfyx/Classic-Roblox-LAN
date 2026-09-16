@@ -9,7 +9,7 @@ import java.util.Set;
 /** Early mobile green-shell navigation, native Views, no online or invented player counts. */
 final class ClassicHome extends LinearLayout {
     interface Actions {
-        void play(); void host(); void servers(); void settings(); void logout();
+        void play(); void host(); void servers(); void settings(); void avatar(); void logout();
         void favorite(boolean value); void friend(String name); void exit();
     }
     private final Actions actions;
@@ -63,6 +63,7 @@ final class ClassicHome extends LinearLayout {
             TextView history=text(messages.length()==0?tr("No messages yet.","Сообщений пока нет."):messages,16,0xff444444);history.setBackgroundColor(Color.WHITE);body.addView(history);
         } else {
             section(user,-1);
+            action(tr("Character / Avatar","Персонаж / Аватар"),new OnClickListener(){public void onClick(View v){actions.avatar();}});
             action(tr("Settings / AI Players","Настройки / AI-игроки"),new OnClickListener(){public void onClick(View v){actions.settings();}});
             action(tr("Log out","Выйти из аккаунта"),new OnClickListener(){public void onClick(View v){actions.logout();}});
             action(tr("Exit application","Закрыть приложение"),new OnClickListener(){public void onClick(View v){actions.exit();}});

@@ -1,7 +1,11 @@
 package lan.classic;
 import java.util.ArrayDeque;
 public final class Actor {
-    public enum State { IDLE, WALK, JUMP, FALL, CLIMB, DEATH }
+    public enum State { IDLE, WALK, JUMP, FALL, CLIMB, DEATH, SEAT }
+    public Appearance appearance=new Appearance();
+    public int tool=0,kills,deaths,wins;
+    public float cooldown,brainTimer;
+    public boolean deathCounted;
     public final int id;
     public final String name;
     public boolean bot,grounded,jump;
