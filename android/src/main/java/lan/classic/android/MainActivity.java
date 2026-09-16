@@ -16,7 +16,8 @@ public final class MainActivity extends Activity implements GameView.Session {
     private String user="",language="ru";private int bots=1,fps=30;private boolean aiEnabled,ultraLow,playing;
     private volatile World world;private Net.Host host;private Net.Client client;private int localId;
     private GameView game;private TextView status,players,chat,health;private WifiManager.MulticastLock multicast;
-    private LinearLayout menu;private float moveX,moveZ;private int generation;
+    private LinearLayout menu;private float moveX,moveZ,stickX,stickZ;private int generation;
+    private TouchControl joystick;
     public void onCreate(Bundle state){super.onCreate(state);getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);accounts=new Accounts(this);settings=getSharedPreferences("settings",MODE_PRIVATE);language=settings.getString("language","ru");
         ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE);ActivityManager.MemoryInfo info=new ActivityManager.MemoryInfo();am.getMemoryInfo(info);ultraLow=info.totalMem<=600L*1024*1024||am.getMemoryClass()<=64;fps=settings.getInt("fps",ultraLow?20:30);login(false);
     }
@@ -28,11 +29,44 @@ public final class MainActivity extends Activity implements GameView.Session {
     private LinearLayout page(String title){ScrollView sc=new ScrollView(this);sc.setFillViewport(true);LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setGravity(Gravity.CENTER);root.setPadding(dp(20),dp(12),dp(20),dp(12));root.setBackgroundColor(0xff777f88);sc.addView(root);TextView logo=label("ROBLOX",40);logo.setTextColor(0xffef3434);logo.setTypeface(Typeface.DEFAULT,Typeface.BOLD);root.addView(logo);root.addView(label(title,16));menu=new LinearLayout(this);menu.setOrientation(LinearLayout.VERTICAL);menu.setPadding(dp(12),dp(8),dp(12),dp(8));menu.setBackgroundDrawable(panel());root.addView(menu,new LinearLayout.LayoutParams(dp(400),-2));setContentView(sc);return menu;}
     private void addButton(LinearLayout root,String s,View.OnClickListener l){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(42));p.topMargin=dp(5);root.addView(button(s,l),p);}
     private EditText field(LinearLayout root,String hint,boolean password){EditText e=new EditText(this);e.setSingleLine(true);e.setTextColor(Color.WHITE);e.setHintTextColor(0xffdddddd);e.setHint(hint);e.setInputType(password?InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD:InputType.TYPE_CLASS_TEXT);root.addView(e);return e;}
-    private void login(final boolean signup){LinearLayout root=page(signup?"Sign Up — local account":"Login — local account");final EditText name=field(root,"Username",false),pass=field(root,"Password",true);final EditText confirm=signup?field(root,"Confirm Password",true):null;final TextView error=label("",13);root.addView(error);
-        addButton(root,signup?"Sign Up":"Login",new View.OnClickListener(){public void onClick(final View v){final String n=name.getText().toString().trim();final char[] p=pass.getText().toString().toCharArray();if(!n.matches("[A-Za-z0-9_]{3,20}")||p.length<6){error.setText("Username: 3–20 A–Z, 0–9, _; password: 6+ characters");return;}if(signup&&!pass.getText().toString().equals(confirm.getText().toString())){error.setText("Passwords do not match");return;}v.setEnabled(false);new Thread(new Runnable(){public void run(){String problem=null;try{if(signup)accounts.register(n,p);else if(!accounts.login(n,p))problem="Invalid username or password";}catch(Exception e){problem=e.getMessage();}finally{Arrays.fill(p,'\0');}final String result=problem;handler.post(new Runnable(){public void run(){v.setEnabled(true);if(result==null){user=n;home();}else error.setText(result);}});}},"password").start();}});
-        addButton(root,signup?"Login":"Create local account",new View.OnClickListener(){public void onClick(View v){login(!signup);}});
+    private LinearLayout loginPage() {
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        FrameLayout frame=new FrameLayout(this);
+        frame.addView(new ClassicLoginArt(this,false),new FrameLayout.LayoutParams(-1,-1));
+        ScrollView scroll=new ScrollView(this);
+        scroll.setFillViewport(true);
+        LinearLayout column=new LinearLayout(this);
+        column.setOrientation(LinearLayout.VERTICAL);
+        column.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL);
+        column.setPadding(dp(26),dp(28),dp(26),dp(20));
+        scroll.addView(column,new ScrollView.LayoutParams(-1,-2));
+        column.addView(new ClassicLoginArt(this,true),new LinearLayout.LayoutParams(-1,dp(110)));
+        LinearLayout form=new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(-1,-2);
+        fp.topMargin=dp(18);column.addView(form,fp);
+        frame.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
+        setContentView(frame);
+        return form;
     }
-    private void home(){playing=false;LinearLayout root=page("Classic LAN • 2012 • milestone 0.1");root.addView(label(user+" — "+(ultraLow?"ULTRA LOW":"NORMAL"),14));
+    private EditText authField(LinearLayout form,String hint,boolean password) {
+        EditText e=new EditText(this);
+        e.setSingleLine(true);e.setTextSize(19);e.setTextColor(0xff333333);e.setHintTextColor(0xff969c9f);
+        e.setHint(hint);e.setPadding(dp(12),dp(6),dp(12),dp(6));
+        e.setInputType(password?InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD:InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        GradientDrawable bg=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xfff1f3f3,0xffffffff});
+        bg.setCornerRadius(dp(8));bg.setStroke(dp(1),0xff8aafb9);e.setBackgroundDrawable(bg);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(48));lp.bottomMargin=dp(10);form.addView(e,lp);
+        return e;
+    }
+    private void login(final boolean signup){LinearLayout root=loginPage();final EditText name=authField(root,t("Username","Имя пользователя"),false),pass=authField(root,t("Password","Пароль"),true);final EditText confirm=signup?authField(root,t("Confirm Password","Повторите пароль"),true):null;final TextView error=label("",13);error.setTextColor(0xff8e1717);root.addView(error);
+        addButton(root,signup?t("Sign Up","Зарегистрироваться"):t("Login","Войти"),new View.OnClickListener(){public void onClick(final View v){final String n=name.getText().toString().trim();final char[] p=pass.getText().toString().toCharArray();if(!n.matches("[A-Za-z0-9_]{3,20}")||p.length<6){error.setText("Username: 3–20 A–Z, 0–9, _; password: 6+ characters");return;}if(signup&&!pass.getText().toString().equals(confirm.getText().toString())){error.setText("Passwords do not match");return;}v.setEnabled(false);new Thread(new Runnable(){public void run(){String problem=null;try{if(signup)accounts.register(n,p);else if(!accounts.login(n,p))problem="Invalid username or password";}catch(Exception e){problem=e.getMessage();}finally{Arrays.fill(p,'\0');}final String result=problem;handler.post(new Runnable(){public void run(){v.setEnabled(true);if(result==null){user=n;home();}else error.setText(result);}});}},"password").start();}});
+        addButton(root,signup?t("Login","Уже есть аккаунт? Войти"):t("Register New Account","Зарегистрировать аккаунт"),new View.OnClickListener(){public void onClick(View v){login(!signup);}});
+        Button register=(Button)root.getChildAt(root.getChildCount()-1);
+        register.setBackgroundColor(Color.TRANSPARENT);register.setTextColor(0xff24526b);register.setTextSize(17);
+    }
+    private void home(){playing=false;setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);LinearLayout root=page("Classic LAN • 2012 • milestone 0.1");root.addView(label(user+" — "+(ultraLow?"ULTRA LOW":"NORMAL"),14));
         addButton(root,t("OFFLINE","ИГРАТЬ ОФЛАЙН"),new View.OnClickListener(){public void onClick(View v){start(false,null,Net.PORT);}});
         addButton(root,t("CREATE LAN GAME","СОЗДАТЬ LAN ИГРУ"),new View.OnClickListener(){public void onClick(View v){start(true,null,Net.PORT);}});
         addButton(root,t("LOCAL SERVERS","СЕРВЕРЫ В WI-FI"),new View.OnClickListener(){public void onClick(View v){servers();}});
@@ -82,20 +116,32 @@ public final class MainActivity extends Activity implements GameView.Session {
 
     private void acquireMulticast(){if(multicast!=null)return;WifiManager wifi=(WifiManager)getApplicationContext().getSystemService(WIFI_SERVICE);if(wifi!=null){multicast=wifi.createMulticastLock("classic-lan");multicast.setReferenceCounted(false);multicast.acquire();}}
     private void start(boolean lan,String address,int port){generation++;stopSession();try{if(address==null){world=new World();Actor a=world.add(user,false,language);localId=a.id;if(aiEnabled)for(int i=0;i<bots;i++)world.add("Builder"+(i+1),true,language);host=new Net.Host(world,lan,port);if(lan)acquireMulticast();}else client=new Net.Client(address,port,user,language);playing=true;showGame();}catch(Exception e){stopSession();home();new AlertDialog.Builder(this).setTitle("Connection error").setMessage(e.toString()).setPositiveButton("OK",null).show();}}
-    private void showGame(){FrameLayout root=new FrameLayout(this);game=new GameView(this,this);game.fps=fps;game.studs=!ultraLow;root.addView(game);status=label("",13);place(root,status,Gravity.TOP|Gravity.CENTER_HORIZONTAL,340,32,0,0);players=label("",12);players.setBackgroundColor(0x88505050);place(root,players,Gravity.TOP|Gravity.RIGHT,150,180,0,38);chat=label("",12);chat.setBackgroundColor(0x55303030);place(root,chat,Gravity.TOP|Gravity.LEFT,280,160,4,38);health=label("Health: 100",14);health.setTextColor(0xff66ee55);place(root,health,Gravity.BOTTOM|Gravity.RIGHT,150,36,4,4);
+    private void showGame(){FrameLayout root=new FrameLayout(this);root.setMotionEventSplittingEnabled(true);game=new GameView(this,this);game.fps=fps;game.studs=!ultraLow;root.addView(game);status=label("",13);place(root,status,Gravity.TOP|Gravity.CENTER_HORIZONTAL,340,32,0,0);players=label("",12);players.setBackgroundColor(0x88505050);place(root,players,Gravity.TOP|Gravity.RIGHT,150,180,0,38);chat=label("",12);chat.setBackgroundColor(0x55303030);place(root,chat,Gravity.TOP|Gravity.LEFT,280,160,4,38);health=label("Health: 100",14);health.setTextColor(0xff66ee55);place(root,health,Gravity.BOTTOM|Gravity.RIGHT,150,36,4,4);
         Button back=button("Menu",new View.OnClickListener(){public void onClick(View v){new AlertDialog.Builder(MainActivity.this).setTitle("Menu").setItems(new String[]{"Resume","Leave Game"},new DialogInterface.OnClickListener(){public void onClick(DialogInterface d,int i){if(i==1){stopSession();home();}}}).show();}});place(root,back,Gravity.TOP|Gravity.LEFT,76,34,4,2);
         Button speak=button("Chat",new View.OnClickListener(){public void onClick(View v){final EditText e=new EditText(MainActivity.this);e.setSingleLine(true);new AlertDialog.Builder(MainActivity.this).setTitle("Chat").setView(e).setPositiveButton("Send",new DialogInterface.OnClickListener(){public void onClick(DialogInterface d,int i){String s=e.getText().toString();if(client!=null)client.chat(s);else if(world!=null)world.message(localId,s);}}).setNegativeButton("Cancel",null).show();}});place(root,speak,Gravity.TOP|Gravity.LEFT,76,34,84,2);
-        pad(root,"W",76,100,0,-1);pad(root,"S",76,4,0,1);pad(root,"A",26,52,-1,0);pad(root,"D",126,52,1,0);
-        Button jump=button("Jump",null);jump.setOnTouchListener(new View.OnTouchListener(){public boolean onTouch(View v,MotionEvent e){if(e.getActionMasked()==MotionEvent.ACTION_DOWN)input(moveX,moveZ,true);return true;}});place(root,jump,Gravity.BOTTOM|Gravity.RIGHT,82,60,22,60);
-        TextView backpack=label("Backpack   [ empty ]",13);backpack.setGravity(Gravity.CENTER);backpack.setBackgroundDrawable(panel());place(root,backpack,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL,210,42,0,4);setContentView(root);handler.post(hud);
+        TouchControl.Listener controls=new TouchControl.Listener() {
+            public void move(float x,float z){stickX=x;stickZ=z;applyStick(false);}
+            public void jump(){applyStick(true);}
+        };
+        joystick=new TouchControl(this,false,controls);
+        place(root,joystick,Gravity.BOTTOM|Gravity.LEFT,122,122,18,24);
+        TouchControl jump=new TouchControl(this,true,controls);
+        place(root,jump,Gravity.BOTTOM|Gravity.RIGHT,78,78,24,44);
+        TextView backpack=label("Backpack   [ empty ]",13);backpack.setGravity(Gravity.CENTER);backpack.setBackgroundDrawable(panel());place(root,backpack,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL,210,42,0,4);setContentView(root);handler.post(hud);handler.post(inputTick);
     }
-    private void pad(FrameLayout root,String name,int left,int bottom,final float x,final float z){Button b=button(name,null);b.setOnTouchListener(new View.OnTouchListener(){public boolean onTouch(View v,MotionEvent e){int a=e.getActionMasked();if(a==MotionEvent.ACTION_DOWN){double r=Math.toRadians(game.cameraYaw);moveX=(float)(x*Math.cos(r)+z*Math.sin(r));moveZ=(float)(-x*Math.sin(r)+z*Math.cos(r));input(moveX,moveZ,false);}else if(a==MotionEvent.ACTION_UP||a==MotionEvent.ACTION_CANCEL){moveX=moveZ=0;input(0,0,false);}return true;}});place(root,b,Gravity.BOTTOM|Gravity.LEFT,48,46,left,bottom);}
+    private void applyStick(boolean jump) {
+        double r=Math.toRadians(game==null?0:game.cameraYaw);
+        moveX=(float)(stickX*Math.cos(r)+stickZ*Math.sin(r));
+        moveZ=(float)(-stickX*Math.sin(r)+stickZ*Math.cos(r));
+        input(moveX,moveZ,jump);
+    }
+    private final Runnable inputTick=new Runnable(){public void run(){if(!playing)return;applyStick(false);handler.postDelayed(this,33);}};
     private void place(FrameLayout root,View v,int gravity,int w,int h,int x,int y){FrameLayout.LayoutParams p=new FrameLayout.LayoutParams(dp(w),dp(h),gravity);if((gravity&Gravity.RIGHT)==Gravity.RIGHT)p.rightMargin=dp(x);else p.leftMargin=dp(x);if((gravity&Gravity.BOTTOM)==Gravity.BOTTOM)p.bottomMargin=dp(y);else p.topMargin=dp(y);root.addView(v,p);}
     private final Runnable hud=new Runnable(){public void run(){if(!playing)return;Net.Snapshot s=snapshot();status.setText("Classic Baseplate  |  "+s.round);String names="Players\n";for(Actor a:s.actors){names+=a.name+"\n";if(a.id==s.you)health.setText("Health: "+Math.max(0,(int)a.health));}players.setText(names);String text="";for(String line:s.chat)text+=line+"\n";if(client!=null&&!client.error.isEmpty())text+=client.error;chat.setText(text);handler.postDelayed(this,200);}};
     public Net.Snapshot snapshot(){Net.Client c=client;if(c!=null)return c.latest;World w=world;return w==null?new Net.Snapshot():Net.snapshot(w,localId);}
     public void input(float x,float z,boolean jump){if(client!=null){client.x=x;client.z=z;client.jump|=jump;}else if(world!=null)world.input(localId,x,z,jump);}
-    private void stopSession(){playing=false;handler.removeCallbacks(hud);if(client!=null){client.close();client=null;}if(host!=null){host.close();host=null;}world=null;if(multicast!=null){if(multicast.isHeld())multicast.release();multicast=null;}}
-    protected void onPause(){super.onPause();input(0,0,false);if(game!=null)game.onPause();}
+    private void stopSession(){playing=false;handler.removeCallbacks(hud);handler.removeCallbacks(inputTick);stickX=stickZ=moveX=moveZ=0;if(client!=null){client.close();client=null;}if(host!=null){host.close();host=null;}world=null;if(multicast!=null){if(multicast.isHeld())multicast.release();multicast=null;}}
+    protected void onPause(){super.onPause();stickX=stickZ=0;if(joystick!=null)joystick.reset();input(0,0,false);if(game!=null)game.onPause();}
     protected void onResume(){super.onResume();if(game!=null&&playing)game.onResume();}
     protected void onDestroy(){generation++;stopSession();super.onDestroy();}
     public void onBackPressed(){generation++;if(playing)stopSession();if(user.length()>0)home();else super.onBackPressed();}

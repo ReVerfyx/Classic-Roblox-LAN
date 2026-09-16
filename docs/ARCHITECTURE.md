@@ -2,7 +2,7 @@
 
 ## Era: 2012
 
-Visual target: gray rectangular bevel/gradient panels, small sans-serif text, chat upper left, player list upper right, tool area at bottom, health lower right. Current UI is an approximation, not an extracted historical client. Android menu adaptations use standard Holo dialogs. No modern cards, voxel terrain or Minecraft mining/building mechanics.
+Visual target: gray rectangular bevel/gradient panels, small sans-serif text, chat upper left, player list upper right, tool area at bottom, health lower right. Current UI is an approximation, not an extracted historical client. Login follows the supplied early mobile reference: portrait layout, blue sunburst, green hill, skyline, red outlined white wordmark and white input fields. These are original Canvas/vector elements. Gameplay uses a translucent analog thumbstick left, round arrow jump button right, and swipe camera with independent pointer ownership. Android settings use standard Holo dialogs. No modern cards, voxel terrain or Minecraft mining/building mechanics.
 
 Reference research:
 - Historical November 2012 chat/backpack footage: https://www.youtube.com/watch?v=hnTtlTNnURY
@@ -26,6 +26,8 @@ Classic-Roblox-LAN/
   android/src/main/java/lan/classic/android/
     MainActivity.java  # accounts, menus, touch, host/join lifecycle
     Accounts.java      # device-local salted password verification
+    ClassicLoginArt.java # original vector login background and wordmark
+    TouchControl.java   # analog joystick and round jump control
     GameView.java      # GLES renderer
   core/src/main/java/lan/classic/
     Actor.java
