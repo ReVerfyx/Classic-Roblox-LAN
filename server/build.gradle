@@ -1,0 +1,4 @@
+plugins { id 'application' }
+dependencies { implementation project(':core') }
+application { mainClass = 'lan.classic.server.Main' }
+java { sourceCompatibility = JavaVersion.VERSION_1_8; targetCompatibility = JavaVersion.VERSION_1_8 }
