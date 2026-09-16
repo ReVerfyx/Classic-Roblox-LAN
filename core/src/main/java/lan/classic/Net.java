@@ -3,7 +3,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
-/** v1 framed binary TCP. Server is authoritative; clients send input, never positions. */
+/** v2 framed binary TCP. Server is authoritative; clients send input, never positions. */
 public final class Net {
     public static final int PORT=53640,DISCOVERY=53641,MAGIC=0x434c414e,VERSION=2;
     public static final class Snapshot {

@@ -89,7 +89,7 @@ final class ClassicHome extends LinearLayout {
     private static final class Icon extends View {
         private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);private final Path path=new Path();private final int kind,color;
         Icon(Context c,int kind,int color){super(c);this.kind=kind;this.color=color;}
-        protected void onDraw(Canvas c){c.save();c.translate(getWidth()/2f-16,getHeight()/2f-16);p.setColor(color);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2.3f);p.setStrokeJoin(Paint.Join.ROUND);
+        protected void onDraw(Canvas c){c.save();float scale=Math.min(getWidth(),getHeight())/36f;c.translate(getWidth()/2f-16*scale,getHeight()/2f-16*scale);c.scale(scale,scale);p.setColor(color);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2.3f);p.setStrokeJoin(Paint.Join.ROUND);
             if(kind==0){path.reset();path.moveTo(3,14);path.lineTo(16,3);path.lineTo(29,14);path.moveTo(7,12);path.lineTo(7,29);path.lineTo(13,29);path.lineTo(13,21);path.lineTo(20,21);path.lineTo(20,29);path.lineTo(26,29);path.lineTo(26,12);c.drawPath(path,p);}
             else if(kind==1){c.drawRoundRect(new RectF(2,7,30,27),4,4,p);c.drawLine(7,17,15,17,p);c.drawLine(11,13,11,21,p);c.drawCircle(22,14,1,p);c.drawCircle(25,20,1,p);}
             else if(kind==2){c.drawCircle(16,9,6,p);c.drawRoundRect(new RectF(6,17,26,30),5,5,p);}
