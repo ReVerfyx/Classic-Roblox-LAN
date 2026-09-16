@@ -165,7 +165,7 @@ public final class MainActivity extends Activity implements GameView.Session {
         place(root,joystick,Gravity.BOTTOM|Gravity.LEFT,122,122,18,24);
         TouchControl jump=new TouchControl(this,true,controls);
         place(root,jump,Gravity.BOTTOM|Gravity.RIGHT,78,78,24,44);
-        LinearLayout tools=new LinearLayout(this);tools.setGravity(Gravity.CENTER);tools.setBackgroundDrawable(panel());String[] toolNames={"Seat","Sword","Rocket"};for(int i=0;i<toolNames.length;i++){final int tool=i;Button b=button((i+1)+"  "+toolNames[i]);b.setTextSize(11);b.setOnClickListener(new View.OnClickListener(){public void onClick(View v){useTool(tool);}});tools.addView(b,new LinearLayout.LayoutParams(0,dp(42),1));}place(root,tools,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL,270,44,0,4);setContentView(root);handler.post(hud);handler.post(inputTick);
+        LinearLayout tools=new LinearLayout(this);tools.setGravity(Gravity.CENTER);tools.setBackgroundDrawable(panel());String[] toolNames={"Seat","Sword","Rocket"};for(int i=0;i<toolNames.length;i++){final int tool=i;Button b=button((i+1)+"  "+toolNames[i],new View.OnClickListener(){public void onClick(View v){useTool(tool);}});b.setTextSize(11);tools.addView(b,new LinearLayout.LayoutParams(0,dp(42),1));}place(root,tools,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL,270,44,0,4);setContentView(root);handler.post(hud);handler.post(inputTick);
     }
     private void useTool(int tool){if(client!=null)client.useTool(tool);else if(world!=null)world.useTool(localId,tool);}
     private void applyStick(boolean jump) {
