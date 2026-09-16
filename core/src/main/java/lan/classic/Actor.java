@@ -5,7 +5,7 @@ public final class Actor {
     public final int id;
     public final String name;
     public boolean bot,grounded,jump;
-    public float x,y=3,z,vx,vy,vz,yaw,ix,iz,health=100,respawn,phase;
+    public float x,y=3.4f,z,vx,vy,vz,yaw,ix,iz,health=100,respawn,phase;
     public String language="en",goal="EXPLORE",personality="Helpful";
     public int routeIndex,followId=-1;
     public double nextChat;
