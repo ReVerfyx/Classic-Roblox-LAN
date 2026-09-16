@@ -20,6 +20,7 @@ public final class World {
         nav.edge(a,b);nav.edge(b,a);nav.edge(b,c);nav.edge(c,b);nav.edge(c,d);nav.edge(d,c);
     }
     public synchronized Actor add(String name,boolean bot,String language){Actor a=new Actor(nextId++,name,bot);a.language=language;a.x=(a.id%3-1)*4;a.z=8;actors.put(a.id,a);return a;}
+    public synchronized void resetCharacter(int id){Actor a=actors.get(id);if(a!=null&&!a.bot&&a.health>0){a.health=0;a.respawn=0;a.ix=a.iz=0;}}
     public synchronized void remove(int id){actors.remove(id);routes.remove(id);}
     public synchronized void input(int id,float x,float z,boolean jump){Actor a=actors.get(id);if(a==null||a.bot)return;if(Float.isNaN(x)||Float.isNaN(z)||Float.isInfinite(x)||Float.isInfinite(z))return;float len=(float)Math.sqrt(x*x+z*z);a.ix=x/Math.max(1,len);a.iz=z/Math.max(1,len);a.jump|=jump;}
     public synchronized void message(int id,String text){Actor a=actors.get(id);if(a==null)return;text=text.replace('\n',' ').replace('\r',' ').trim();if(text.length()>160)text=text.substring(0,160);if(text.length()==0)return;say(a.name,text);social.respond(this,a,text);}

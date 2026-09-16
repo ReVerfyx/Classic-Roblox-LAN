@@ -47,9 +47,9 @@ Classic-Roblox-LAN/
 
 Part has Position, Rotation, Size, Color, Material, Anchored, CanCollide, Transparency, Shape and surface flags. Only axis-aligned blocks/static collisions are implemented in this milestone. Map geometry currently comes from the versioned core rather than arbitrary remote data; both peers must use exactly the same build.
 
-TCP 53640: client sends magic 0x434c414e, protocol version 1, bounded username and language. Server replies magic and actor ID. Each request carries opcode 1, two normalized movement axes, jump flag, and bounded UTF-8 chat. Server replies a snapshot with phase, water, actors and recent chat. Limits: 20 actors, 8 chat lines, 160 chat characters, bounded length-prefix allocations, timeout 5s. No Java object deserialization. No account password travels over LAN. This is trusted-LAN identity, not cross-device password authentication.
+TCP 53640: client sends magic 0x434c414e, protocol version 2, bounded username and language. Server replies magic and actor ID. Each request carries opcode 1 (input) or 2 (reset self), two normalized movement axes, jump flag, and bounded UTF-8 chat. Server replies a snapshot with phase, water, actors and recent chat. Limits: 20 actors, 8 chat lines, 160 chat characters, bounded length-prefix allocations, timeout 5s. No Java object deserialization. No account password travels over LAN. This is trusted-LAN identity, not cross-device password authentication.
 
-UDP 53641: CLASSIC_LAN_DISCOVER_1 → CLASSIC_LAN_1|port|name|map|count|capacity. Broadcasts sent to interface broadcasts and global broadcast; direct IP fallback. Android holds a MulticastLock during LAN use. No external rendezvous or internet API.
+UDP 53641: CLASSIC_LAN_DISCOVER_2 → CLASSIC_LAN_2|port|name|map|count|capacity. Broadcasts sent to interface broadcasts and global broadcast; direct IP fallback. Android holds a MulticastLock during LAN use. No external rendezvous or internet API.
 
 ## Simulation and bots
 
@@ -64,3 +64,11 @@ Tiny LLM is not implemented. Before adding a backend, measure APK+model size, pr
 Classic Baseplate is an original procedural test level. Crossroads, Happy Home in Robloxia, Chaos Canyon, Glass Houses, Rocket Arena, Sword Fight on the Heights, Work at a Pizza Place and Natural Disaster Survival are not bundled. Implement a bounded RBXLX/portable-parts importer for user-supplied authorized assets next; do not silently substitute invented maps under those names. Roblox scripts require separate behavior reimplementation, not arbitrary evaluation.
 
 Do not start additional maps until API16 install/render and two-device Wi-Fi tests pass.
+
+## Menu reference revision (0.1.1)
+
+The supplied green mobile Home and translucent escape menu are used as explicit user-selected references. The visual contract is now intentionally mixed: 2012-style world/R6, early mobile login, and the later supplied mobile Home/escape menu. It is not claimed to be one pixel-exact 2012 client.
+
+Research: https://www.webdesignmuseum.org/gallery/roblox-2015 (archived website, not a mobile screenshot); https://github.com/bloxstraplabs/bloxstrap/issues/2101 (primary project discussion identifying the 2015 escape menu). Some historical mobile pages were blocked. The supplied screenshots are the decisive visual source. No old APK was executed or imported.
+
+ClassicHome.java provides native green-header navigation, persisted recents/favorites/local friends and last-session chat. ClassicPauseMenu.java shows session players, profile details, local Add Friend, live FPS/studs settings, help, resume and confirmed leave/reset. Reset uses protocol v2 and can reset only the requesting peer. Opening a menu stops local input but does not pause the host simulation. Friends are local saved names, not authenticated global accounts; no fake online counts or messaging backend.

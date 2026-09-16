@@ -15,7 +15,8 @@ public class CoreTest {
             long end=System.currentTimeMillis()+4000;while(c.latest.actors.size()<2&&System.currentTimeMillis()<end)Thread.sleep(20);
             check(c.latest.actors.size()==2,"Two LAN clients: "+c.error);c.x=1;Thread.sleep(400);check(host.world.actors.size()==2,"Both connected");
             c.chat("привет");Thread.sleep(200);check(!d.latest.chat.isEmpty(),"Replicated chat");
+            c.resetCharacter();Thread.sleep(200);boolean dead=false;for(Actor a:c.latest.actors)if(a.id==c.latest.you)dead=a.health<=0;check(dead,"Server-authoritative reset");
         }finally{if(c!=null)c.close();if(d!=null)d.close();host.close();}
-        System.out.println("PASS: climb, platform, jump, flood survival, intent, memory, graph, discovery, two peers, chat");
+        System.out.println("PASS: climb, platform, jump, flood survival, intent, memory, graph, discovery, two peers, chat, network reset");
     }
 }

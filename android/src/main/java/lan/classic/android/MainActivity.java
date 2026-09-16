@@ -18,6 +18,8 @@ public final class MainActivity extends Activity implements GameView.Session {
     private GameView game;private TextView status,players,chat,health;private WifiManager.MulticastLock multicast;
     private LinearLayout menu;private float moveX,moveZ,stickX,stickZ;private int generation;
     private TouchControl joystick;
+    private ClassicPauseMenu pauseMenu;
+    private boolean menuOpen;
     public void onCreate(Bundle state){super.onCreate(state);getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);accounts=new Accounts(this);settings=getSharedPreferences("settings",MODE_PRIVATE);language=settings.getString("language","ru");
         ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE);ActivityManager.MemoryInfo info=new ActivityManager.MemoryInfo();am.getMemoryInfo(info);ultraLow=info.totalMem<=600L*1024*1024||am.getMemoryClass()<=64;fps=settings.getInt("fps",ultraLow?20:30);login(false);
     }
@@ -26,7 +28,7 @@ public final class MainActivity extends Activity implements GameView.Session {
     private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
     private TextView label(String s,int size){TextView v=new TextView(this);v.setText(s);v.setTextSize(size);v.setTextColor(Color.WHITE);v.setPadding(dp(6),dp(4),dp(6),dp(4));v.setTypeface(Typeface.SANS_SERIF);return v;}
     private Button button(String s,View.OnClickListener l){Button b=new Button(this);b.setText(s);b.setTextColor(Color.WHITE);b.setTextSize(14);b.setBackgroundDrawable(panel());b.setOnClickListener(l);return b;}
-    private LinearLayout page(String title){ScrollView sc=new ScrollView(this);sc.setFillViewport(true);LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setGravity(Gravity.CENTER);root.setPadding(dp(20),dp(12),dp(20),dp(12));root.setBackgroundColor(0xff777f88);sc.addView(root);TextView logo=label("ROBLOX",40);logo.setTextColor(0xffef3434);logo.setTypeface(Typeface.DEFAULT,Typeface.BOLD);root.addView(logo);root.addView(label(title,16));menu=new LinearLayout(this);menu.setOrientation(LinearLayout.VERTICAL);menu.setPadding(dp(12),dp(8),dp(12),dp(8));menu.setBackgroundDrawable(panel());root.addView(menu,new LinearLayout.LayoutParams(dp(400),-2));setContentView(sc);return menu;}
+    private LinearLayout page(String title){ScrollView sc=new ScrollView(this);sc.setFillViewport(true);LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setGravity(Gravity.CENTER);root.setPadding(dp(20),dp(12),dp(20),dp(12));root.setBackgroundColor(0xff777f88);sc.addView(root);TextView logo=label("ROBLOX",40);logo.setTextColor(0xffef3434);logo.setTypeface(Typeface.DEFAULT,Typeface.BOLD);root.addView(logo);root.addView(label(title,16));menu=new LinearLayout(this);menu.setOrientation(LinearLayout.VERTICAL);menu.setPadding(dp(12),dp(8),dp(12),dp(8));menu.setBackgroundDrawable(panel());root.addView(menu,new LinearLayout.LayoutParams(-1,-2));setContentView(sc);return menu;}
     private void addButton(LinearLayout root,String s,View.OnClickListener l){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(42));p.topMargin=dp(5);root.addView(button(s,l),p);}
     private EditText field(LinearLayout root,String hint,boolean password){EditText e=new EditText(this);e.setSingleLine(true);e.setTextColor(Color.WHITE);e.setHintTextColor(0xffdddddd);e.setHint(hint);e.setInputType(password?InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD:InputType.TYPE_CLASS_TEXT);root.addView(e);return e;}
     private LinearLayout loginPage() {
@@ -66,12 +68,37 @@ public final class MainActivity extends Activity implements GameView.Session {
         Button register=(Button)root.getChildAt(root.getChildCount()-1);
         register.setBackgroundColor(Color.TRANSPARENT);register.setTextColor(0xff24526b);register.setTextSize(17);
     }
-    private void home(){playing=false;setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);LinearLayout root=page("Classic LAN • 2012 • milestone 0.1");root.addView(label(user+" — "+(ultraLow?"ULTRA LOW":"NORMAL"),14));
-        addButton(root,t("OFFLINE","ИГРАТЬ ОФЛАЙН"),new View.OnClickListener(){public void onClick(View v){start(false,null,Net.PORT);}});
-        addButton(root,t("CREATE LAN GAME","СОЗДАТЬ LAN ИГРУ"),new View.OnClickListener(){public void onClick(View v){start(true,null,Net.PORT);}});
-        addButton(root,t("LOCAL SERVERS","СЕРВЕРЫ В WI-FI"),new View.OnClickListener(){public void onClick(View v){servers();}});
-        addButton(root,t("Settings","Настройки"),new View.OnClickListener(){public void onClick(View v){preferences();}});
-        root.addView(label(t("Independent reconstruction. Not an official Roblox client.","Независимая реконструкция. Не официальный клиент Roblox."),11));
+    private Set<String> friends(){return new TreeSet<String>(settings.getStringSet(user+".friends",new HashSet<String>()));}
+    private void home() {
+        playing=false;
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        setContentView(new ClassicHome(this,user,language.equals("ru"),settings.getBoolean(user+".recent",false),settings.getBoolean(user+".favorite",false),friends(),settings.getString(user+".chat",""),new ClassicHome.Actions() {
+            public void play(){start(false,null,Net.PORT);}
+            public void host(){start(true,null,Net.PORT);}
+            public void servers(){MainActivity.this.servers();}
+            public void settings(){preferences();}
+            public void logout(){user="";login(false);}
+            public void exit(){finish();}
+            public void favorite(boolean value){settings.edit().putBoolean(user+".favorite",value).apply();}
+            public void friend(final String name){new AlertDialog.Builder(MainActivity.this).setTitle(name).setMessage(t("Saved on this device. Join the same LAN server to play together.","Сохранён на этом устройстве. Для совместной игры подключитесь к одному LAN-серверу.")).setNegativeButton(t("Close","Закрыть"),null).setPositiveButton(t("Remove","Удалить"),new DialogInterface.OnClickListener(){public void onClick(DialogInterface d,int which){Set<String> list=friends();list.remove(name);settings.edit().putStringSet(user+".friends",list).apply();home();}}).show();}
+        }));
+    }
+    private void openPause() {
+        if(!playing||menuOpen)return;
+        stickX=stickZ=0;if(joystick!=null)joystick.reset();input(0,0,false);menuOpen=true;
+        pauseMenu=new ClassicPauseMenu(this,language.equals("ru"),new ClassicPauseMenu.Actions(){
+            public Net.Snapshot snapshot(){return MainActivity.this.snapshot();}
+            public boolean isFriend(String name){return friends().contains(name);}
+            public void addFriend(String name){Set<String> list=friends();if(list.size()<100){list.add(name);settings.edit().putStringSet(user+".friends",list).apply();}}
+            public int fps(){return fps;}
+            public void fps(int value){fps=value;game.fps=value;settings.edit().putInt("fps",value).apply();}
+            public boolean studs(){return game.studs;}
+            public void studs(boolean value){game.studs=value;}
+            public void reset(){if(client!=null)client.resetCharacter();else if(world!=null)world.resetCharacter(localId);}
+            public void leave(){stopSession();home();}
+        });
+        pauseMenu.setOnDismissListener(new DialogInterface.OnDismissListener(){public void onDismiss(DialogInterface d){menuOpen=false;pauseMenu=null;}});
+        pauseMenu.show();
     }
     private void preferences(){final LinearLayout root=page(t("Settings","Настройки"));root.addView(label("Language / Язык",14));final String[] codes={"en","ru","de","es","fr","pt","pl"};Spinner langs=new Spinner(this);langs.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"English","Русский","Deutsch","Español","Français","Português","Polski"}));langs.setSelection(Arrays.asList(codes).indexOf(language));root.addView(langs);langs.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> a){}public void onItemSelected(AdapterView<?> a,View v,int p,long id){language=codes[p];settings.edit().putString("language",language).apply();}});
         final CheckBox ai=new CheckBox(this);ai.setText("Enable AI Players");ai.setTextColor(Color.WHITE);ai.setChecked(aiEnabled);root.addView(ai);ai.setOnClickListener(new View.OnClickListener(){public void onClick(View v){if(!ai.isChecked()){aiEnabled=false;return;}ai.setChecked(false);new AlertDialog.Builder(MainActivity.this).setTitle("WARNING").setMessage("AI Players require additional CPU and memory.\n\nThis feature is not recommended for older devices and may cause lower FPS, longer loading times, increased RAM and battery usage, or crashes on devices with very little memory.").setNegativeButton("Cancel",null).setPositiveButton("Enable Anyway",new DialogInterface.OnClickListener(){public void onClick(DialogInterface d,int which){aiEnabled=true;ai.setChecked(true);}}).show();}});
@@ -115,9 +142,9 @@ public final class MainActivity extends Activity implements GameView.Session {
     }
 
     private void acquireMulticast(){if(multicast!=null)return;WifiManager wifi=(WifiManager)getApplicationContext().getSystemService(WIFI_SERVICE);if(wifi!=null){multicast=wifi.createMulticastLock("classic-lan");multicast.setReferenceCounted(false);multicast.acquire();}}
-    private void start(boolean lan,String address,int port){generation++;stopSession();try{if(address==null){world=new World();Actor a=world.add(user,false,language);localId=a.id;if(aiEnabled)for(int i=0;i<bots;i++)world.add("Builder"+(i+1),true,language);host=new Net.Host(world,lan,port);if(lan)acquireMulticast();}else client=new Net.Client(address,port,user,language);playing=true;showGame();}catch(Exception e){stopSession();home();new AlertDialog.Builder(this).setTitle("Connection error").setMessage(e.toString()).setPositiveButton("OK",null).show();}}
+    private void start(boolean lan,String address,int port){generation++;stopSession();setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);try{if(address==null){world=new World();Actor a=world.add(user,false,language);localId=a.id;if(aiEnabled)for(int i=0;i<bots;i++)world.add("Builder"+(i+1),true,language);host=new Net.Host(world,lan,port);if(lan)acquireMulticast();}else client=new Net.Client(address,port,user,language);playing=true;settings.edit().putBoolean(user+".recent",true).apply();showGame();}catch(Exception e){stopSession();home();new AlertDialog.Builder(this).setTitle("Connection error").setMessage(e.toString()).setPositiveButton("OK",null).show();}}
     private void showGame(){FrameLayout root=new FrameLayout(this);root.setMotionEventSplittingEnabled(true);game=new GameView(this,this);game.fps=fps;game.studs=!ultraLow;root.addView(game);status=label("",13);place(root,status,Gravity.TOP|Gravity.CENTER_HORIZONTAL,340,32,0,0);players=label("",12);players.setBackgroundColor(0x88505050);place(root,players,Gravity.TOP|Gravity.RIGHT,150,180,0,38);chat=label("",12);chat.setBackgroundColor(0x55303030);place(root,chat,Gravity.TOP|Gravity.LEFT,280,160,4,38);health=label("Health: 100",14);health.setTextColor(0xff66ee55);place(root,health,Gravity.BOTTOM|Gravity.RIGHT,150,36,4,4);
-        Button back=button("Menu",new View.OnClickListener(){public void onClick(View v){new AlertDialog.Builder(MainActivity.this).setTitle("Menu").setItems(new String[]{"Resume","Leave Game"},new DialogInterface.OnClickListener(){public void onClick(DialogInterface d,int i){if(i==1){stopSession();home();}}}).show();}});place(root,back,Gravity.TOP|Gravity.LEFT,76,34,4,2);
+        Button back=button("Menu",new View.OnClickListener(){public void onClick(View v){openPause();}});place(root,back,Gravity.TOP|Gravity.LEFT,76,34,4,2);
         Button speak=button("Chat",new View.OnClickListener(){public void onClick(View v){final EditText e=new EditText(MainActivity.this);e.setSingleLine(true);new AlertDialog.Builder(MainActivity.this).setTitle("Chat").setView(e).setPositiveButton("Send",new DialogInterface.OnClickListener(){public void onClick(DialogInterface d,int i){String s=e.getText().toString();if(client!=null)client.chat(s);else if(world!=null)world.message(localId,s);}}).setNegativeButton("Cancel",null).show();}});place(root,speak,Gravity.TOP|Gravity.LEFT,76,34,84,2);
         TouchControl.Listener controls=new TouchControl.Listener() {
             public void move(float x,float z){stickX=x;stickZ=z;applyStick(false);}
@@ -130,6 +157,7 @@ public final class MainActivity extends Activity implements GameView.Session {
         TextView backpack=label("Backpack   [ empty ]",13);backpack.setGravity(Gravity.CENTER);backpack.setBackgroundDrawable(panel());place(root,backpack,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL,210,42,0,4);setContentView(root);handler.post(hud);handler.post(inputTick);
     }
     private void applyStick(boolean jump) {
+        if(menuOpen){input(0,0,false);return;}
         double r=Math.toRadians(game==null?0:game.cameraYaw);
         moveX=(float)(stickX*Math.cos(r)+stickZ*Math.sin(r));
         moveZ=(float)(-stickX*Math.sin(r)+stickZ*Math.cos(r));
@@ -140,10 +168,12 @@ public final class MainActivity extends Activity implements GameView.Session {
     private final Runnable hud=new Runnable(){public void run(){if(!playing)return;Net.Snapshot s=snapshot();status.setText("Classic Baseplate  |  "+s.round);String names="Players\n";for(Actor a:s.actors){names+=a.name+"\n";if(a.id==s.you)health.setText("Health: "+Math.max(0,(int)a.health));}players.setText(names);String text="";for(String line:s.chat)text+=line+"\n";if(client!=null&&!client.error.isEmpty())text+=client.error;chat.setText(text);handler.postDelayed(this,200);}};
     public Net.Snapshot snapshot(){Net.Client c=client;if(c!=null)return c.latest;World w=world;return w==null?new Net.Snapshot():Net.snapshot(w,localId);}
     public void input(float x,float z,boolean jump){if(client!=null){client.x=x;client.z=z;client.jump|=jump;}else if(world!=null)world.input(localId,x,z,jump);}
-    private void stopSession(){playing=false;handler.removeCallbacks(hud);handler.removeCallbacks(inputTick);stickX=stickZ=moveX=moveZ=0;if(client!=null){client.close();client=null;}if(host!=null){host.close();host=null;}world=null;if(multicast!=null){if(multicast.isHeld())multicast.release();multicast=null;}}
+    private void stopSession(){
+        if(playing){StringBuilder history=new StringBuilder();for(String line:snapshot().chat)history.append(line).append('\n');settings.edit().putString(user+".chat",history.toString()).apply();}
+        if(pauseMenu!=null)pauseMenu.dismiss();menuOpen=false;playing=false;handler.removeCallbacks(hud);handler.removeCallbacks(inputTick);stickX=stickZ=moveX=moveZ=0;if(client!=null){client.close();client=null;}if(host!=null){host.close();host=null;}world=null;if(multicast!=null){if(multicast.isHeld())multicast.release();multicast=null;}}
     protected void onPause(){super.onPause();stickX=stickZ=0;if(joystick!=null)joystick.reset();input(0,0,false);if(game!=null)game.onPause();}
     protected void onResume(){super.onResume();if(game!=null&&playing)game.onResume();}
     protected void onDestroy(){generation++;stopSession();super.onDestroy();}
-    public void onBackPressed(){generation++;if(playing)stopSession();if(user.length()>0)home();else super.onBackPressed();}
+    public void onBackPressed(){if(playing){openPause();return;}generation++;if(user.length()>0)home();else super.onBackPressed();}
     public void onLowMemory(){super.onLowMemory();if(world!=null)synchronized(world){for(Actor a:world.actors.values())a.memory.clear();}if(game!=null){game.studs=false;game.fps=20;}Toast.makeText(this,"AI cache cleared. Classic mode active.",Toast.LENGTH_LONG).show();}
 }
