@@ -12,11 +12,12 @@ public class CoreTest {
         check(w.nav.path(0,3).size()==4,"Ladder route");
         String xml="<roblox><Item class=\"Part\"><Properties><string name=\"Name\">Spawn</string><Vector3 name=\"size\"><X>8</X><Y>1</Y><Z>8</Z></Vector3><CoordinateFrame name=\"CFrame\"><X>0</X><Y>0</Y><Z>0</Z></CoordinateFrame><bool name=\"Anchored\">true</bool></Properties></Item><Item class=\"Script\"><Properties><string name=\"Name\">RoundScript</string><string name=\"Source\">print('hello')\ngame:ChangeDisaster('TSUNAMI')</string></Properties></Item></roblox>";
         Place imported=PlaceImporter.read(new ByteArrayInputStream(xml.getBytes("UTF-8")));check(imported.parts.size()==1&&imported.scripts.size()==1,"RBXLX Part and Script import");GameConfig trusted=new GameConfig();trusted.trustedScripts=true;World scripted=new World(trusted);scripted.loadPlace(imported);check("TSUNAMI".equals(trusted.forcedDisaster)&&!scripted.chat.isEmpty(),"Trusted Lua subset");
+        StringBuilder large=new StringBuilder("<roblox>");for(int i=0;i<600;i++)large.append("<Item class=\"Part\"><Properties><Vector3 name=\"size\"><X>4</X><Y>1</Y><Z>4</Z></Vector3></Properties></Item>");for(int i=0;i<40;i++)large.append("<Item class=\"Script\"><Properties><ProtectedString name=\"Source\">print('ok')</ProtectedString></Properties></Item>");large.append("</roblox>");Place many=PlaceImporter.read(new ByteArrayInputStream(large.toString().getBytes("UTF-8")));check(many.parts.size()==600&&many.scripts.size()==40,"Map count caps removed");check(many.navigation.nodes.size()==600,"Navigation cap removed");
         Net.Host host=new Net.Host(new World(),true,Net.PORT);Net.Client c=null,d=null;
         try{
             check(!Net.search().isEmpty(),"UDP discovery");c=new Net.Client("127.0.0.1",Net.PORT,"Tester","ru");d=new Net.Client("127.0.0.1",Net.PORT,"Guest","en");
             long end=System.currentTimeMillis()+4000;while(c.latest.actors.size()<2&&System.currentTimeMillis()<end)Thread.sleep(20);
-            check(c.latest.actors.size()==2,"Two LAN clients: "+c.error);c.x=1;Thread.sleep(400);check(host.world.actors.size()==2,"Both connected");
+            check(c.latest.parts.size()==host.world.parts.size(),"LAN map geometry");check(c.latest.actors.size()==2,"Two LAN clients: "+c.error);c.x=1;Thread.sleep(400);check(host.world.actors.size()==2,"Both connected");
             c.chat("привет");Thread.sleep(200);check(!d.latest.chat.isEmpty(),"Replicated chat");
             c.resetCharacter();Thread.sleep(200);boolean dead=false;for(Actor a:c.latest.actors)if(a.id==c.latest.you)dead=a.health<=0;check(dead,"Server-authoritative reset");
         }finally{if(c!=null)c.close();if(d!=null)d.close();host.close();}
