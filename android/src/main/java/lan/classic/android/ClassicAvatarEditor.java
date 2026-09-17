@@ -7,6 +7,9 @@ import android.opengl.GLSurfaceView;
 import android.view.*;
 import android.widget.*;
 import java.nio.*;
+import java.io.*;
+import android.opengl.GLUtils;
+import lan.classic.ClassicMesh;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 import lan.classic.Appearance;
@@ -80,14 +83,46 @@ final class ClassicAvatarEditor extends LinearLayout {
     /** GLES 1.1 preview: actual boxes, sleeves, pant shells and hats are
      * rendered in perspective instead of being painted as a flat icon. */
     private final class AvatarPreview3D extends GLSurfaceView implements GLSurfaceView.Renderer {
-        private FloatBuffer cube; private float spin; private volatile float yaw=155;private float lastX;
+        private ImportedModel imported; private FloatBuffer cube; private float spin; private volatile float yaw=155;private float lastX;
         AvatarPreview3D(Context c){super(c);setEGLConfigChooser(5,6,5,0,16,0);setRenderer(this);setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);}
         private FloatBuffer mesh(float[] v){FloatBuffer b=ByteBuffer.allocateDirect(v.length*4).order(ByteOrder.nativeOrder()).asFloatBuffer();b.put(v).position(0);return b;}
-        public void onSurfaceCreated(GL10 gl,EGLConfig cfg){gl.glClearColor(.78f,.68f,.55f,1);gl.glEnable(GL10.GL_DEPTH_TEST);gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);float[] v={-.5f,-.5f,-.5f,.5f,-.5f,-.5f,.5f,.5f,-.5f,-.5f,.5f,-.5f,-.5f,-.5f,.5f,.5f,-.5f,.5f,.5f,.5f,.5f,-.5f,.5f,.5f};int[] ix={4,5,6,4,6,7,1,0,3,1,3,2,0,4,7,0,7,3,5,1,2,5,2,6,3,7,6,3,6,2,0,1,5,0,5,4};float[] out=new float[ix.length*3];for(int i=0;i<ix.length;i++)for(int j=0;j<3;j++)out[i*3+j]=v[ix[i]*3+j];cube=mesh(out);}
+        public void onSurfaceCreated(GL10 gl,EGLConfig cfg){gl.glClearColor(.78f,.68f,.55f,1);gl.glEnable(GL10.GL_DEPTH_TEST);gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);float[] v={-.5f,-.5f,-.5f,.5f,-.5f,-.5f,.5f,.5f,-.5f,-.5f,.5f,-.5f,-.5f,-.5f,.5f,.5f,-.5f,.5f,.5f,.5f,.5f,-.5f,.5f,.5f};int[] ix={4,5,6,4,6,7,1,0,3,1,3,2,0,4,7,0,7,3,5,1,2,5,2,6,3,7,6,3,6,2,0,1,5,0,5,4};float[] out=new float[ix.length*3];for(int i=0;i<ix.length;i++)for(int j=0;j<3;j++)out[i*3+j]=v[ix[i]*3+j];cube=mesh(out);String path=getContext().getSharedPreferences("settings",Context.MODE_PRIVATE).getString("avatarContentPath","");imported=null;if(path.length()>0)try{imported=new ImportedModel(gl,new File(path));}catch(IOException e){post(new Runnable(){public void run(){Toast.makeText(getContext(),"Cannot load imported R6. Import the OBB again.",Toast.LENGTH_LONG).show();}});}}
         public void onSurfaceChanged(GL10 gl,int w,int h){gl.glViewport(0,0,w,h);gl.glMatrixMode(GL10.GL_PROJECTION);gl.glLoadIdentity();float ratio=(float)w/Math.max(1,h);gl.glFrustumf(-ratio,ratio,-1,1,2.5f,60);gl.glMatrixMode(GL10.GL_MODELVIEW);}
         public void onDrawFrame(GL10 gl){spin+=.35f;gl.glClear(GL10.GL_COLOR_BUFFER_BIT|GL10.GL_DEPTH_BUFFER_BIT);gl.glLoadIdentity();gl.glTranslatef(0,.3f,-13.5f);gl.glRotatef(-7,1,0,0);gl.glRotatef((float)Math.sin(spin*.01f)*3,0,1,0);box(gl,0,-3.3f,0,12,.2f,9,0x704d36);box(gl,0,1.5f,2.2f,8,6,.2f,0xc3a47b);box(gl,-3.7f,1.5f,0,.2f,6,5,0xb48f6c);box(gl,3.7f,1.5f,0,.2f,6,5,0xb48f6c);for(int side:new int[]{-1,1}){box(gl,side*3,0,1.5f,1.7f,5.8f,1.4f,0x704831);for(int shelf=0;shelf<4;shelf++){box(gl,side*3,-2.3f+shelf*1.3f,.8f,1.7f,.12f,1.9f,0xb38156);box(gl,side*3,-2+shelf*1.3f,.9f,1.1f,.4f,.8f,shelf%2==0?0x455565:0x89503e);}}box(gl,0,3.2f,1,5,.2f,1.5f,0x986e48);box(gl,0,-3.12f,0,4,.25f,3,0xd8cba8);gl.glPushMatrix();gl.glRotatef(yaw,0,1,0);drawAvatar(gl);gl.glPopMatrix();try{Thread.sleep(33);}catch(InterruptedException ignored){}}
         public boolean onTouchEvent(MotionEvent e){if(e.getAction()==MotionEvent.ACTION_DOWN){lastX=e.getX();getParent().requestDisallowInterceptTouchEvent(true);}else if(e.getAction()==MotionEvent.ACTION_MOVE){yaw+=(e.getX()-lastX)*.6f;lastX=e.getX();}else getParent().requestDisallowInterceptTouchEvent(false);return true;}
-        private void drawAvatar(GL10 gl){Appearance ap=appearance;int shirt=new int[]{ap.colors[1],0x171717,0x3b8d4b,0x284a91}[Math.max(0,Math.min(3,ap.shirt))];int pants=new int[]{ap.colors[4],0x1d1d1d,0x34415e}[Math.max(0,Math.min(2,ap.pants))];float walk=(float)Math.sin(spin*.12f)*5;gl.glRotatef(appearance.animationPack==1?walk:appearance.animationPack==2?walk*.5f:0,0,0,1);box(gl,0,.05f,0,2.05f,2.05f,1.08f,shirt);head(gl,ap.colors[0]);box(gl,-1.55f,.05f,0,1.05f,2.05f,1.05f,ap.colors[2]);box(gl,1.55f,.05f,0,1.05f,2.05f,1.05f,ap.colors[3]);box(gl,-.52f,-2.0f,0,1.08f,2.1f,1.08f,pants);box(gl,.52f,-2.0f,0,1.08f,2.1f,1.08f,pants);box(gl,-1.55f,.05f,-.57f,1.08f,1.1f,.08f,shirt);box(gl,1.55f,.05f,-.57f,1.08f,1.1f,.08f,shirt);box(gl,-.52f,-2.0f,-.57f,1.1f,1.1f,.08f,pants);box(gl,.52f,-2.0f,-.57f,1.1f,1.1f,.08f,pants);box(gl,-.23f,1.78f,-.69f,.12f,.14f,.04f,0x151515);box(gl,.23f,1.78f,-.69f,.12f,.14f,.04f,0x151515);if(ap.hat==0)box(gl,0,2.5f,0,1.8f,.28f,1.8f,0x4b2e1a);else if(ap.hat==1){box(gl,0,2.48f,0,1.6f,.35f,1.6f,0xffd83d);box(gl,0,2.67f,0,1.15f,.42f,1.15f,0xffd83d);}else if(ap.hat==2)box(gl,0,2.53f,0,2.5f,.18f,.62f,0x222222);else box(gl,0,2.65f,0,.95f,.8f,.95f,0x8f8f8f);box(gl,0,1.38f,-.69f,.32f,.045f,.04f,0x151515);box(gl,0,.1f,-.57f,.045f,1.9f,.045f,0xbac0c6);for(int i=0;i<3;i++)box(gl,.25f,.6f-i*.4f,-.58f,.08f,.08f,.04f,0xe0e0e0);}
+        private void drawAvatar(GL10 gl){if(imported!=null){imported.draw(gl);return;}Appearance ap=appearance;int shirt=new int[]{ap.colors[1],0x171717,0x3b8d4b,0x284a91}[Math.max(0,Math.min(3,ap.shirt))];int pants=new int[]{ap.colors[4],0x1d1d1d,0x34415e}[Math.max(0,Math.min(2,ap.pants))];float walk=(float)Math.sin(spin*.12f)*5;gl.glRotatef(appearance.animationPack==1?walk:appearance.animationPack==2?walk*.5f:0,0,0,1);box(gl,0,.05f,0,2.05f,2.05f,1.08f,shirt);head(gl,ap.colors[0]);box(gl,-1.55f,.05f,0,1.05f,2.05f,1.05f,ap.colors[2]);box(gl,1.55f,.05f,0,1.05f,2.05f,1.05f,ap.colors[3]);box(gl,-.52f,-2.0f,0,1.08f,2.1f,1.08f,pants);box(gl,.52f,-2.0f,0,1.08f,2.1f,1.08f,pants);box(gl,-1.55f,.05f,-.57f,1.08f,1.1f,.08f,shirt);box(gl,1.55f,.05f,-.57f,1.08f,1.1f,.08f,shirt);box(gl,-.52f,-2.0f,-.57f,1.1f,1.1f,.08f,pants);box(gl,.52f,-2.0f,-.57f,1.1f,1.1f,.08f,pants);box(gl,-.23f,1.78f,-.69f,.12f,.14f,.04f,0x151515);box(gl,.23f,1.78f,-.69f,.12f,.14f,.04f,0x151515);drawHat(gl,ap);box(gl,0,1.38f,-.69f,.32f,.045f,.04f,0x151515);box(gl,0,.1f,-.57f,.045f,1.9f,.045f,0xbac0c6);for(int i=0;i<3;i++)box(gl,.25f,.6f-i*.4f,-.58f,.08f,.08f,.04f,0xe0e0e0);}
+        private void drawHat(GL10 gl,Appearance ap){if(ap.hat==0)box(gl,0,2.5f,0,1.8f,.28f,1.8f,0x4b2e1a);else if(ap.hat==1){box(gl,0,2.48f,0,1.6f,.35f,1.6f,0xffd83d);box(gl,0,2.67f,0,1.15f,.42f,1.15f,0xffd83d);}else if(ap.hat==2)box(gl,0,2.53f,0,2.5f,.18f,.62f,0x222222);else box(gl,0,2.65f,0,.95f,.8f,.95f,0x8f8f8f);}
+        private final class ImportedModel {
+            final FloatBuffer[] vertices=new FloatBuffer[6], colors=new FloatBuffer[6];
+            final float[][] shade=new float[6][];final int[] counts=new int[6],lastColor={-1,-1,-1,-1,-1,-1};
+            final FloatBuffer faceVertices=mesh(new float[]{-.52f,1.15f,-.606f,.52f,1.15f,-.606f,-.52f,2.19f,-.606f,.52f,2.19f,-.606f});
+            final FloatBuffer faceUv=mesh(new float[]{1,1,0,1,1,0,0,0});
+            int faceTexture;
+            ImportedModel(GL10 gl,File directory)throws IOException{
+                for(int i=0;i<6;i++){
+                    ClassicMesh model;InputStream in=new FileInputStream(new File(directory,AvatarContent.NAMES[i]+".mesh"));
+                    try{model=ClassicMesh.read(in);}finally{in.close();}
+                    vertices[i]=mesh(model.positions);counts[i]=model.vertexCount;colors[i]=mesh(new float[model.vertexCount*4]);shade[i]=new float[model.vertexCount];
+                    for(int v=0;v<model.vertexCount;v++)shade[i][v]=.55f+.45f*Math.max(0,model.normals[v*3]*-.3f+model.normals[v*3+1]*.8f-model.normals[v*3+2]*.5f);
+                }
+                Bitmap bitmap=BitmapFactory.decodeFile(new File(directory,"face.png").getPath());if(bitmap==null)throw new IOException("Invalid face texture");
+                try{int[] ids=new int[1];gl.glGenTextures(1,ids,0);faceTexture=ids[0];gl.glBindTexture(GL10.GL_TEXTURE_2D,faceTexture);gl.glTexParameterf(GL10.GL_TEXTURE_2D,GL10.GL_TEXTURE_MIN_FILTER,GL10.GL_LINEAR);gl.glTexParameterf(GL10.GL_TEXTURE_2D,GL10.GL_TEXTURE_MAG_FILTER,GL10.GL_LINEAR);gl.glTexParameterf(GL10.GL_TEXTURE_2D,GL10.GL_TEXTURE_WRAP_S,GL10.GL_CLAMP_TO_EDGE);gl.glTexParameterf(GL10.GL_TEXTURE_2D,GL10.GL_TEXTURE_WRAP_T,GL10.GL_CLAMP_TO_EDGE);GLUtils.texImage2D(GL10.GL_TEXTURE_2D,0,bitmap,0);}finally{bitmap.recycle();}
+            }
+            void part(GL10 gl,int i,float x,float y,int color){
+                if(lastColor[i]!=color){colors[i].position(0);for(float light:shade[i]){colors[i].put(((color>>16)&255)/255f*light);colors[i].put(((color>>8)&255)/255f*light);colors[i].put((color&255)/255f*light);colors[i].put(1);}colors[i].position(0);lastColor[i]=color;}
+                gl.glPushMatrix();gl.glTranslatef(x,y,0);gl.glEnableClientState(GL10.GL_COLOR_ARRAY);gl.glColorPointer(4,GL10.GL_FLOAT,0,colors[i]);gl.glVertexPointer(3,GL10.GL_FLOAT,0,vertices[i]);gl.glDrawArrays(GL10.GL_TRIANGLES,0,counts[i]);gl.glDisableClientState(GL10.GL_COLOR_ARRAY);gl.glPopMatrix();
+            }
+            void draw(GL10 gl){
+                Appearance ap=appearance;int shirt=new int[]{ap.colors[1],0x171717,0x3b8d4b,0x284a91}[Math.max(0,Math.min(3,ap.shirt))];int pants=new int[]{ap.colors[4],0x1d1d1d,0x34415e}[Math.max(0,Math.min(2,ap.pants))];
+                gl.glPushMatrix();float sway=(float)Math.sin(spin*.12f)*5;gl.glRotatef(ap.animationPack==1?sway:ap.animationPack==2?sway*.5f:0,0,0,1);
+                part(gl,0,0,1.65f,ap.colors[0]);part(gl,1,0,0,shirt);part(gl,2,-1.5f,0,ap.colors[2]);part(gl,3,1.5f,0,ap.colors[3]);part(gl,4,-.5f,-2,pants);part(gl,5,.5f,-2,ap.pants==0?ap.colors[5]:pants);
+                drawHat(gl,ap);
+                if(ap.face==0){gl.glEnable(GL10.GL_TEXTURE_2D);gl.glBindTexture(GL10.GL_TEXTURE_2D,faceTexture);gl.glEnableClientState(GL10.GL_TEXTURE_COORD_ARRAY);gl.glTexCoordPointer(2,GL10.GL_FLOAT,0,faceUv);gl.glVertexPointer(3,GL10.GL_FLOAT,0,faceVertices);gl.glColor4f(1,1,1,1);gl.glEnable(GL10.GL_BLEND);gl.glBlendFunc(GL10.GL_SRC_ALPHA,GL10.GL_ONE_MINUS_SRC_ALPHA);gl.glDrawArrays(GL10.GL_TRIANGLE_STRIP,0,4);gl.glDisable(GL10.GL_BLEND);gl.glDisableClientState(GL10.GL_TEXTURE_COORD_ARRAY);gl.glDisable(GL10.GL_TEXTURE_2D);}else{
+                    box(gl,-.23f,1.78f,-.61f,.12f,.14f,.04f,0x151515);box(gl,.23f,1.78f,-.61f,.12f,.14f,.04f,0x151515);
+                    box(gl,0,1.38f,-.61f,.32f,ap.face==2?.15f:.045f,.04f,0x151515);
+                }gl.glPopMatrix();
+            }
+        }
         private void head(GL10 g,int color){for(int i=0;i<20;i++){g.glPushMatrix();g.glTranslatef(0,1.7f,0);g.glRotatef(i*18,0,1,0);box(g,0,0,.56f,.22f,1.15f,.16f,color);g.glPopMatrix();}box(g,0,1.7f,0,.85f,1.15f,.85f,color);}
         private void box(GL10 gl,float x,float y,float z,float sx,float sy,float sz,int color){gl.glPushMatrix();gl.glTranslatef(x,y,z);gl.glScalef(sx,sy,sz);gl.glColor4f(((color>>16)&255)/255f,((color>>8)&255)/255f,(color&255)/255f,1);gl.glVertexPointer(3,GL10.GL_FLOAT,0,cube);for(int face=0;face<6;face++){float shade=new float[]{.85f,.7f,.75f,.9f,1,.6f}[face];gl.glColor4f(((color>>16)&255)/255f*shade,((color>>8)&255)/255f*shade,(color&255)/255f*shade,1);gl.glDrawArrays(GL10.GL_TRIANGLES,face*6,6);}gl.glPopMatrix();}
     }

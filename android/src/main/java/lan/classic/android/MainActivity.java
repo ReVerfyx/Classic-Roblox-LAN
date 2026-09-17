@@ -14,7 +14,7 @@ import java.util.*;
 import java.io.*;
 import lan.classic.*;
 public final class MainActivity extends Activity implements GameView.Session {
-    private static final int PICK_RBXLX=7001;
+    private static final int PICK_RBXLX=7001, PICK_AVATAR_PACK=7002;
     private final Handler handler=new Handler();private Accounts accounts;private android.content.SharedPreferences settings;
     private String user="",language="ru",placeName="Classic Baseplate",importedMapPath="";private int bots=1,fps=30;private GameConfig.Mode mode=GameConfig.Mode.DISASTERS;private boolean aiEnabled,ultraLow,playing;
     private volatile World world;private Net.Host host;private Net.Client client;private int localId;
@@ -123,6 +123,11 @@ public final class MainActivity extends Activity implements GameView.Session {
         final String[] counts={"1","2","3","4","6","8","12","16"};root.addView(label("Bots — "+(ultraLow?"recommended: 1–2":"maximum: 16"),14));Spinner count=new Spinner(this);count.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,counts));count.setSelection(Arrays.asList(counts).indexOf(String.valueOf(bots)));root.addView(count);final TextView warning=label("",12);root.addView(warning);count.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> a){}public void onItemSelected(AdapterView<?> a,View v,int p,long id){bots=Integer.parseInt(counts[p]);warning.setText(ultraLow&&bots>2?"Not recommended for this device.":"");}});
         root.addView(label("Game mode / Режим",14));final String[] modeNames={"Natural Disaster Survival","Classic Baseplate","Rocket Arena","Sword Fight on the Heights"};final GameConfig.Mode[] modes={GameConfig.Mode.DISASTERS,GameConfig.Mode.SANDBOX,GameConfig.Mode.ROCKET_ARENA,GameConfig.Mode.SWORD_FIGHT};Spinner modeSpinner=new Spinner(this);modeSpinner.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,modeNames));int modeIndex=0;for(int i=0;i<modes.length;i++)if(modes[i]==mode)modeIndex=i;modeSpinner.setSelection(modeIndex);root.addView(modeSpinner);modeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> a){}public void onItemSelected(AdapterView<?> a,View v,int p,long id){mode=modes[p];settings.edit().putString("mode",mode.name()).apply();}});
         root.addView(label("AI Chat Engine: CLASSIC\nTINY LLM: unavailable — ARMv7 memory benchmarks required",13));
+        addButton(root,t("Import R6 from local OBB","Импортировать R6 из локального OBB"),new View.OnClickListener(){public void onClick(View v){
+            Intent pick=new Intent(Intent.ACTION_GET_CONTENT);pick.setType("*/*");pick.addCategory(Intent.CATEGORY_OPENABLE);
+            try{startActivityForResult(Intent.createChooser(pick,"2017 main.1.com.roblox.client.obb"),PICK_AVATAR_PACK);}catch(ActivityNotFoundException e){Toast.makeText(MainActivity.this,"Установите файловый менеджер",Toast.LENGTH_LONG).show();}
+        }});
+        root.addView(label(t("Local pack: original R6 meshes and face in the wardrobe. Catalog clothing and the original room are not included in this import.","Локальный пакет: оригинальные модели R6 и лицо в гардеробе. Каталожная одежда и оригинальная комната пока не импортируются."),12));
         addButton(root,t("Load your RBXLX place","Загрузить свою карту RBXLX"),new View.OnClickListener(){public void onClick(View v){Intent pick=new Intent(Intent.ACTION_GET_CONTENT);pick.setType("*/*");pick.addCategory(Intent.CATEGORY_OPENABLE);try{startActivityForResult(Intent.createChooser(pick,t("Choose RBXLX place","Выберите карту RBXLX")),PICK_RBXLX);}catch(ActivityNotFoundException e){Toast.makeText(MainActivity.this,"Установите файловый менеджер",Toast.LENGTH_LONG).show();}}});
         addButton(root,t("Play saved map","Играть на сохранённой карте"),new View.OnClickListener(){public void onClick(View v){importedMapPath=settings.getString("importedMapPath","");if(importedMapPath.length()==0){Toast.makeText(MainActivity.this,"Сначала загрузите карту",Toast.LENGTH_SHORT).show();return;}mode=GameConfig.Mode.SANDBOX;start(false,null,Net.PORT);}});
         root.addView(label(t("Imported maps are copied into this app's private data/maps folder and can be hosted offline. The Android OBB is read-only; app data is the correct writable location.","Импортированные карты копируются в закрытую папку data/maps этого приложения и запускаются офлайн. OBB доступен только для чтения; записываемая папка — data приложения."),12));
@@ -131,6 +136,7 @@ public final class MainActivity extends Activity implements GameView.Session {
     }
     protected void onActivityResult(int requestCode,int resultCode,Intent data){
         super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode==PICK_AVATAR_PACK&&resultCode==RESULT_OK&&data!=null&&data.getData()!=null){importAvatarPack(data.getData());return;}
         if(requestCode!=PICK_RBXLX||resultCode!=RESULT_OK||data==null||data.getData()==null)return;
         final Uri uri=data.getData();
         new Thread(new Runnable(){public void run(){File dst=null;try{
@@ -142,6 +148,24 @@ public final class MainActivity extends Activity implements GameView.Session {
             try(InputStream in=new BufferedInputStream(new FileInputStream(dst))){PlaceImporter.read(in);}
             final String path=dst.getAbsolutePath();handler.post(new Runnable(){public void run(){importedMapPath=path;settings.edit().putString("importedMapPath",path).apply();preferences();Toast.makeText(MainActivity.this,t("Map imported","Карта импортирована"),Toast.LENGTH_SHORT).show();}});
         }catch(final Exception e){if(dst!=null)dst.delete();handler.post(new Runnable(){public void run(){new AlertDialog.Builder(MainActivity.this).setTitle("Import").setMessage(e.getMessage()).setPositiveButton("OK",null).show();}});}}},"map-import").start();
+    }
+    private void importAvatarPack(final Uri uri){
+        Toast.makeText(this,t("Importing R6…","Импорт R6…"),Toast.LENGTH_SHORT).show();
+        new Thread(new Runnable(){public void run(){File archive=null,folder=null;boolean saved=false;
+            try{
+                archive=File.createTempFile("avatar-pack-",".obb",getCacheDir());
+                try(InputStream in=getContentResolver().openInputStream(uri);OutputStream out=new FileOutputStream(archive)){
+                    if(in==null)throw new IOException("Cannot open content pack");byte[] buf=new byte[8192];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);
+                }
+                folder=File.createTempFile("avatar-","",getFilesDir());if(!folder.delete())throw new IOException("Cannot prepare avatar folder");
+                AvatarContent.importPack(archive,folder);
+                String previous=settings.getString("avatarContentPath","");
+                if(!settings.edit().putString("avatarContentPath",folder.getAbsolutePath()).commit())throw new IOException("Cannot save avatar settings");
+                saved=true;if(previous.length()>0)AvatarContent.remove(new File(previous));
+                handler.post(new Runnable(){public void run(){avatarEditor();Toast.makeText(MainActivity.this,t("Original R6 imported","Оригинальный R6 импортирован"),Toast.LENGTH_LONG).show();}});
+            }catch(final Exception e){handler.post(new Runnable(){public void run(){new AlertDialog.Builder(MainActivity.this).setTitle("Avatar import").setMessage(e.getMessage()).setPositiveButton("OK",null).show();}});
+            }finally{if(archive!=null)archive.delete();if(!saved&&folder!=null)AvatarContent.remove(folder);}
+        }},"avatar-import").start();
     }
     private void servers(){final int request=++generation;final LinearLayout root=page("Local Servers");final TextView info=label(t("Searching Wi-Fi…","Поиск в Wi-Fi…"),14);root.addView(info);final EditText ip=field(root,"IP: 192.168.1.50",false),port=field(root,"Port: 53640",false);port.setText("53640");port.setInputType(InputType.TYPE_CLASS_NUMBER);
         addButton(root,"DIRECT CONNECT",new View.OnClickListener(){public void onClick(View v){try{int p=Integer.parseInt(port.getText().toString());if(p<1||p>65535)throw new NumberFormatException();start(false,ip.getText().toString().trim(),p);}catch(NumberFormatException e){info.setText("Invalid port");}}});

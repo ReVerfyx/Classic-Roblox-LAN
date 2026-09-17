@@ -2,7 +2,17 @@ import lan.classic.*;
 import java.io.*;
 public class CoreTest {
     static void check(boolean ok,String why){if(!ok)throw new AssertionError(why);}
+    static void testClassicMesh()throws Exception{
+        java.nio.ByteBuffer bytes=java.nio.ByteBuffer.allocate(13+12+3*36+12).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        bytes.put("version 2.00\n".getBytes("US-ASCII"));bytes.putShort((short)12).put((byte)36).put((byte)12).putInt(3).putInt(1);
+        for(int i=0;i<3;i++){bytes.putFloat(i).putFloat(0).putFloat(0).putFloat(0).putFloat(1).putFloat(0).putFloat(0).putFloat(0).putInt(0);}
+        bytes.putInt(2).putInt(0).putInt(1);byte[] fixture=bytes.array();
+        ClassicMesh mesh=ClassicMesh.read(new ByteArrayInputStream(fixture));check(mesh.vertexCount==3&&mesh.positions[0]==2&&mesh.positions[6]==1&&mesh.normals[1]==1,"Mesh indices and normals");
+        bytes.putInt(fixture.length-4,999);boolean rejected=false;try{ClassicMesh.read(new ByteArrayInputStream(fixture));}catch(IOException e){rejected=true;}check(rejected,"Reject invalid mesh indices");
+        rejected=false;try{ClassicMesh.read(new ByteArrayInputStream(java.util.Arrays.copyOf(fixture,30)));}catch(IOException e){rejected=true;}check(rejected,"Reject truncated mesh");
+    }
     public static void main(String[] args)throws Exception{
+        testClassicMesh();
         World w=new World();Actor b=w.add("Builder",true,"ru");
         for(int i=0;i<30*14;i++)w.tick(1f/30);
         check(b.y>14&&b.z<-18,"Bot must climb and exit onto platform: "+b.y+" "+b.z);
