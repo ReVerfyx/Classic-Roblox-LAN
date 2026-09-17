@@ -72,10 +72,11 @@ public final class MainActivity extends Activity implements GameView.Session {
         register.setBackgroundColor(Color.TRANSPARENT);register.setTextColor(0xff24526b);register.setTextSize(17);
     }
     private Set<String> friends(){return new TreeSet<String>(settings.getStringSet(user+".friends",new HashSet<String>()));}
-    private void home() {
+    private void home() { home(0); }
+    private void home(final int initialTab) {
         playing=false;
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        setContentView(new ClassicHome(this,user,language.equals("ru"),settings.getBoolean(user+".recent",false),settings.getBoolean(user+".favorite",false),friends(),settings.getString(user+".chat",""),new ClassicHome.Actions() {
+        ClassicHome homeView=new ClassicHome(this,user,language.equals("ru"),settings.getBoolean(user+".recent",false),settings.getBoolean(user+".favorite",false),friends(),settings.getString(user+".chat",""),new ClassicHome.Actions() {
             public void play(){placeName="Classic Baseplate";importedMapPath="";start(false,null,Net.PORT);}
             public void playMode(String place){placeName=place;importedMapPath=""; if(place.equals("Rocket Arena"))mode=GameConfig.Mode.ROCKET_ARENA;else if(place.equals("Sword Fight on the Heights"))mode=GameConfig.Mode.SWORD_FIGHT;else if(place.equals("Natural Disaster Survival"))mode=GameConfig.Mode.DISASTERS;else mode=GameConfig.Mode.SANDBOX;settings.edit().putString("place",placeName).putString("mode",mode.name()).apply();start(false,null,Net.PORT);}
             public void host(){start(true,null,Net.PORT);}
@@ -86,7 +87,9 @@ public final class MainActivity extends Activity implements GameView.Session {
             public void exit(){finish();}
             public void favorite(boolean value){settings.edit().putBoolean(user+".favorite",value).apply();}
             public void friend(final String name){new AlertDialog.Builder(MainActivity.this).setTitle(name).setMessage(t("Saved on this device. Join the same LAN server to play together.","Сохранён на этом устройстве. Для совместной игры подключитесь к одному LAN-серверу.")).setNegativeButton(t("Close","Закрыть"),null).setPositiveButton(t("Remove","Удалить"),new DialogInterface.OnClickListener(){public void onClick(DialogInterface d,int which){Set<String> list=friends();list.remove(name);settings.edit().putStringSet(user+".friends",list).apply();home();}}).show();}
-        }));
+        });
+        homeView.show(initialTab);
+        setContentView(homeView);
     }
     private Appearance loadAppearance(){return Appearance.decode(settings.getString(user+".appearance",accounts.character(user)));}
     private void saveAppearance(Appearance value){settings.edit().putString(user+".appearance",value.encode()).apply();accounts.saveCharacter(user,value);}
@@ -94,6 +97,7 @@ public final class MainActivity extends Activity implements GameView.Session {
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         setContentView(new ClassicAvatarEditor(this,loadAppearance(),new ClassicAvatarEditor.Actions(){
             public void save(Appearance a){saveAppearance(a);home();}
+            public void navigate(int tab,Appearance a){saveAppearance(a);home(tab);}
             public void cancel(){home();}
         }));
     }

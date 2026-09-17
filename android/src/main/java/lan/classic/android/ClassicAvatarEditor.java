@@ -13,7 +13,7 @@ import lan.classic.Appearance;
 
 /** Offline wardrobe styled after the old mobile Roblox avatar screen. */
 final class ClassicAvatarEditor extends LinearLayout {
-    interface Actions { void save(Appearance appearance); void cancel(); }
+    interface Actions { void save(Appearance appearance); void cancel(); void navigate(int tab,Appearance appearance); }
     private final Appearance appearance; private final AvatarPreview3D preview; private final Actions actions;
     private final int[] palette={0xf5cd30,0xffffff,0x111111,0x0d69ac,0xc4281c,0x4b974b,0x6b327c,0xa4bd47,0x8b4513,0x96999f};
     private final String[] slots={"Head","Torso","Left Arm","Right Arm","Left Leg","Right Leg"};
@@ -35,7 +35,7 @@ final class ClassicAvatarEditor extends LinearLayout {
         TextView recent=text("RECENT",13,0xff707070);recent.setGravity(Gravity.CENTER_VERTICAL);recent.setPadding(d(8),d(5),d(8),0);content.addView(recent,new LayoutParams(-1,d(35)));
         wardrobe=new LinearLayout(c);wardrobe.setOrientation(VERTICAL);content.addView(wardrobe,new LayoutParams(-1,-2));buildWardrobe();
         LinearLayout bottom=new LinearLayout(c);Button cancel=actionButton("CANCEL"),save=actionButton("SAVE");cancel.setOnClickListener(new OnClickListener(){public void onClick(View v){actions.cancel();}});save.setOnClickListener(new OnClickListener(){public void onClick(View v){actions.save(appearance.copy());}});bottom.addView(cancel,new LayoutParams(0,d(46),1));bottom.addView(save,new LayoutParams(0,d(46),1));content.addView(bottom,new LayoutParams(-1,d(55)));
-        LinearLayout nav=new LinearLayout(c);nav.setGravity(Gravity.CENTER);nav.setBackgroundColor(Color.WHITE);String[] navLabels={"⌂\nHOME","▣\nGAMES","●\nAVATAR","▤\nCHAT","•••\nMORE"};for(int i=0;i<navLabels.length;i++){TextView n=text(navLabels[i],10,i==2?0xff00a958:0xff222222);n.setGravity(Gravity.CENTER);if(i==2)n.setTypeface(Typeface.DEFAULT,Typeface.BOLD);if(i!=2)n.setOnClickListener(new OnClickListener(){public void onClick(View v){actions.save(appearance.copy());}});nav.addView(n,new LayoutParams(0,d(54),1));}addView(nav,new LayoutParams(-1,d(54)));
+        LinearLayout nav=new LinearLayout(c);nav.setGravity(Gravity.CENTER);nav.setBackgroundColor(Color.WHITE);String[] navLabels={"⌂\nHOME","▣\nGAMES","●\nAVATAR","▤\nCHAT","•••\nMORE"};for(int i=0;i<navLabels.length;i++){final int target=i;TextView n=text(navLabels[i],10,i==2?0xff00a958:0xff222222);n.setGravity(Gravity.CENTER);if(i==2)n.setTypeface(Typeface.DEFAULT,Typeface.BOLD);if(i!=2)n.setOnClickListener(new OnClickListener(){public void onClick(View v){actions.navigate(target,appearance.copy());}});nav.addView(n,new LayoutParams(0,d(54),1));}addView(nav,new LayoutParams(-1,d(54)));
     }
     protected void onDetachedFromWindow(){preview.onPause();super.onDetachedFromWindow();}
     private int d(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}

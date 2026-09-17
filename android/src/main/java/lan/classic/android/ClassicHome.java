@@ -35,7 +35,7 @@ final class ClassicHome extends LinearLayout {
     private int d(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
     private String tr(String en,String r){return ru?r:en;}
     private TextView text(String s,int size,int color){TextView t=new TextView(getContext());t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setGravity(Gravity.CENTER_VERTICAL);t.setPadding(d(4),d(4),d(4),d(4));return t;}
-    private void show(final int tab) {
+    void show(final int tab) {
         selected=tab;body.removeAllViews();tabs.removeAllViews();String[] labels={tr("Home","Главная"),tr("Games","Игры"),tr("Avatar","Аватар"),tr("Chat","Чат"),tr("More","Ещё")};title.setText(labels[tab]);
         for(int i=0;i<labels.length;i++) {
             final int target=i;LinearLayout item=new LinearLayout(getContext());item.setOrientation(VERTICAL);item.setGravity(Gravity.CENTER);item.setPadding(0,d(2),0,0);
