@@ -9,7 +9,7 @@ import lan.classic.*;
 /** GLES 1.1 fixed-function renderer. Geometry is cached; no texture or native model memory. */
 final class GameView extends GLSurfaceView implements GLSurfaceView.Renderer {
     interface Session {Net.Snapshot snapshot();void input(float x,float z,boolean jump);}
-    private final Session session;private final World level=new World();
+    private final Session session;
     private FloatBuffer cube,cylinder;private int cylinderCount;
     volatile float cameraYaw=0,pitch=24;volatile int fps=30;volatile boolean studs=true;
     private static final float[] SHADES={.84f,.72f,.78f,.9f,1,.65f};
@@ -29,7 +29,7 @@ final class GameView extends GLSurfaceView implements GLSurfaceView.Renderer {
         float x=me==null?0:me.x,y=me==null?3:me.y,z=me==null?8:me.z;
         g.glClear(GL10.GL_COLOR_BUFFER_BIT|GL10.GL_DEPTH_BUFFER_BIT);g.glLoadIdentity();double angle=Math.toRadians(cameraYaw),elevation=Math.toRadians(pitch);float distance=20;
         GLU.gluLookAt(g,x+(float)Math.sin(angle)*distance,y+3+(float)Math.sin(elevation)*distance,z+(float)Math.cos(angle)*distance,x,y+1,z,0,1,0);
-        for(Part p:level.parts){if(p.ladder){box(g,p.x-1.2f,p.y,p.z,.25f,p.sy,.3f,p.color);box(g,p.x+1.2f,p.y,p.z,.25f,p.sy,.3f,p.color);for(int i=1;i<12;i++)box(g,p.x,i,p.z,2.6f,.2f,.4f,p.color);}else drawPart(g,p);}
+        for(Part p:s.parts){if(p.ladder){box(g,p.x-1.2f,p.y,p.z,.25f,p.sy,.3f,p.color);box(g,p.x+1.2f,p.y,p.z,.25f,p.sy,.3f,p.color);for(float h=p.y-p.sy/2+.6f;h<p.y+p.sy/2;h+=1)box(g,p.x,h,p.z,p.sx,.2f,.4f,p.color);}else drawPart(g,p);}
         if(studs){int ox=(int)(x/4)*4,oz=(int)(z/4)*4;for(int xx=ox-20;xx<=ox+20;xx+=4)for(int zz=oz-20;zz<=oz+20;zz+=4)if(Math.abs(xx)<63&&Math.abs(zz)<63)cyl(g,xx,.1f,zz,.7f,.2f,.7f,0x63994f);}
         // Spawn star, built from parts, not a downloaded decal.
         box(g,0,.32f,8,4,.025f,.7f,0x252525);box(g,0,.32f,8,.7f,.025f,4,0x252525);
@@ -37,11 +37,14 @@ final class GameView extends GLSurfaceView implements GLSurfaceView.Renderer {
         if(s.water>-2){g.glEnable(GL10.GL_BLEND);g.glBlendFunc(GL10.GL_SRC_ALPHA,GL10.GL_ONE_MINUS_SRC_ALPHA);g.glColor4f(.1f,.4f,.85f,.52f);g.glPushMatrix();g.glTranslatef(0,s.water-1,0);g.glScalef(128,2,128);mesh(g,cube,36);g.glPopMatrix();g.glDisable(GL10.GL_BLEND);}
     }
     private void drawPart(GL10 g,Part p){
-        if(p.shape==Part.Shape.Cylinder)cyl(g,p.x,p.y,p.z,p.sx,p.sy,p.sz,p.color);
-        else if(p.shape==Part.Shape.Ball)cyl(g,p.x,p.y,p.z,p.sx,p.sy,p.sz,p.color);
-        else box(g,p.x,p.y,p.z,p.sx,p.sy,p.sz,p.color);
+        if(p.transparency>=1)return;
+        g.glPushMatrix();g.glTranslatef(p.x,p.y,p.z);g.glRotatef(p.ry,0,1,0);g.glRotatef(p.rx,1,0,0);g.glRotatef(p.rz,0,0,1);
+        if(p.shape==Part.Shape.Cylinder)cyl(g,0,0,0,p.sx,p.sy,p.sz,p.color);
+        else if(p.shape==Part.Shape.Ball){for(int ring=0;ring<12;ring++){float y=-.5f+(ring+.5f)/12f;float radius=(float)Math.sqrt(.25f-y*y)*2;cyl(g,0,y*p.sy,0,p.sx*radius,p.sy/12,p.sz*radius,p.color);}}
+        else box(g,0,0,0,p.sx,p.sy,p.sz,p.color);
+        g.glPopMatrix();
     }
-    private void drawActor(GL10 g,Actor a){g.glPushMatrix();g.glTranslatef(a.x,a.y,a.z);g.glRotatef(a.yaw,0,1,0);if(a.state==Actor.State.DEATH)g.glRotatef(85,0,0,1);
+    void drawActor(GL10 g,Actor a){g.glPushMatrix();g.glTranslatef(a.x,a.y,a.z);g.glRotatef(a.yaw,0,1,0);if(a.state==Actor.State.DEATH)g.glRotatef(85,0,0,1);
         Appearance ap=a.appearance==null?new Appearance():a.appearance;
         int shirt=new int[]{ap.colors[1],0x171717,0x3b8d4b,0x284a91}[Math.max(0,Math.min(3,ap.shirt))];
         int pants=new int[]{ap.colors[4],0x1d1d1d,0x34415e}[Math.max(0,Math.min(2,ap.pants))];
@@ -60,8 +63,8 @@ final class GameView extends GLSurfaceView implements GLSurfaceView.Renderer {
         g.glPopMatrix();
     }
     private void limb(GL10 g,float x,float y,float z,float a,int color){g.glPushMatrix();g.glTranslatef(x,y,z);g.glRotatef(a,1,0,0);box(g,0,-1,0,1,2,1,color);g.glPopMatrix();}
-    private void box(GL10 g,float x,float y,float z,float sx,float sy,float sz,int color){g.glPushMatrix();g.glTranslatef(x,y,z);g.glScalef(sx,sy,sz);g.glVertexPointer(3,GL10.GL_FLOAT,0,cube);for(int face=0;face<6;face++){float shade=SHADES[face];g.glColor4f(((color>>16)&255)/255f*shade,((color>>8)&255)/255f*shade,(color&255)/255f*shade,1);g.glDrawArrays(GL10.GL_TRIANGLES,face*6,6);}g.glPopMatrix();}
-    private void cyl(GL10 g,float x,float y,float z,float sx,float sy,float sz,int color){g.glPushMatrix();g.glTranslatef(x,y,z);g.glScalef(sx,sy,sz);g.glColor4f(((color>>16)&255)/255f,((color>>8)&255)/255f,(color&255)/255f,1);mesh(g,cylinder,cylinderCount);g.glPopMatrix();}
+    void box(GL10 g,float x,float y,float z,float sx,float sy,float sz,int color){g.glPushMatrix();g.glTranslatef(x,y,z);g.glScalef(sx,sy,sz);g.glVertexPointer(3,GL10.GL_FLOAT,0,cube);for(int face=0;face<6;face++){float shade=SHADES[face];g.glColor4f(((color>>16)&255)/255f*shade,((color>>8)&255)/255f*shade,(color&255)/255f*shade,1);g.glDrawArrays(GL10.GL_TRIANGLES,face*6,6);}g.glPopMatrix();}
+    void cyl(GL10 g,float x,float y,float z,float sx,float sy,float sz,int color){g.glPushMatrix();g.glTranslatef(x,y,z);g.glScalef(sx,sy,sz);g.glColor4f(((color>>16)&255)/255f,((color>>8)&255)/255f,(color&255)/255f,1);mesh(g,cylinder,cylinderCount);g.glPopMatrix();}
     private void mesh(GL10 g,FloatBuffer b,int count){g.glVertexPointer(3,GL10.GL_FLOAT,0,b);g.glDrawArrays(GL10.GL_TRIANGLES,0,count);}
     public boolean onTouchEvent(MotionEvent e){int action=e.getActionMasked();if(action==MotionEvent.ACTION_DOWN){cameraPointer=e.getPointerId(0);lastX=e.getX();lastY=e.getY();}else if(action==MotionEvent.ACTION_MOVE){int i=e.findPointerIndex(cameraPointer);if(i>=0){cameraYaw-=(e.getX(i)-lastX)*.3f;pitch=Math.max(5,Math.min(65,pitch+(e.getY(i)-lastY)*.2f));lastX=e.getX(i);lastY=e.getY(i);}}else if(action==MotionEvent.ACTION_UP||action==MotionEvent.ACTION_CANCEL)cameraPointer=-1;return true;}
 }

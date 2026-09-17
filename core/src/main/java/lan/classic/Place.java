@@ -10,8 +10,8 @@ public final class Place {
     public final Navigation navigation=new Navigation();
     public void buildNavigation(){
         navigation.nodes.clear();
-        for(Part p:parts)if(p.canCollide&&p.anchored&&p.sx>=3&&p.sz>=3&&!p.kill&&p.transparency<1){navigation.add(p.x,p.y+p.sy/2,p.z,Navigation.Kind.Ground);if(navigation.nodes.size()>=192)break;}
-        for(Part p:parts)if(p.ladder&&navigation.nodes.size()<240){
+        for(Part p:parts)if(p.canCollide&&p.anchored&&p.sx>=3&&p.sz>=3&&!p.kill&&p.transparency<1){navigation.add(p.x,p.y+p.sy/2,p.z,Navigation.Kind.Ground);}
+        for(Part p:parts)if(p.ladder){
             float z=p.z+p.sz/2+1;int a=navigation.add(p.x,p.y-p.sy/2,z,Navigation.Kind.Ground);int b=navigation.add(p.x,p.y+p.sy/2+.3f,z,Navigation.Kind.Ladder);navigation.edge(a,b);navigation.edge(b,a);
         }
         if(navigation.nodes.isEmpty())navigation.add(0,0,0,Navigation.Kind.Ground);
